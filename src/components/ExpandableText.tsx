@@ -20,7 +20,6 @@ interface ExpandableTextProps {
   platform?: string;
 }
 
-// Interface yang disesuaikan dengan JSON asli API kamu
 interface FlickReelsData {
   drama?: {
     title?: string;
@@ -37,7 +36,6 @@ interface NetshortData {
   shortPlayName?: string;
 }
 
-// Gabungan tipe response
 type ApiResponse = FlickReelsData & NetshortData;
 
 function sanitize(val: unknown, fallback: string): string;
@@ -64,7 +62,6 @@ export default function ExpandableText({
 }: ExpandableTextProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Inisialisasi data dengan fallback dari props agar tidak kosong saat loading
   const [detailData, setDetailData] = useState({
     synopsis: sanitize(initialText, "Tonton keseruan ceritanya sekarang."),
     tag: sanitize(initialTag, "Drama"),
@@ -95,7 +92,6 @@ export default function ExpandableText({
       const data: ApiResponse = await res.json();
 
       if (data) {
-        // PERBAIKAN LOGIKA PEMETAAN DISINI
         if (platform === 'flickreels' && data.drama) {
           setDetailData({
             synopsis: sanitize(data.drama.description, initialText),
@@ -104,7 +100,7 @@ export default function ExpandableText({
           });
         } else if (platform === 'netshort') {
           setDetailData({
-            synopsis: sanitize(data.shotIntroduce, initialText), // Menggunakan shotIntroduce sesuai JSON Netshort
+            synopsis: sanitize(data.shotIntroduce, initialText),
             tag: sanitize(data.shortPlayLabels?.[0], initialTag || "Drama"),
             episodes: sanitize(data.totalEpisode, initialChapterCount || 0)
           });
@@ -127,10 +123,9 @@ export default function ExpandableText({
     }
   }, [isOpen, fetchDetail, hasFetched]);
 
-  // Handle prevent scroll
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflowY = "scroll";
       return () => {
         document.body.style.overflow = "unset";
       };
