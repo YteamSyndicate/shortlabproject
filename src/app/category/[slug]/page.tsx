@@ -225,15 +225,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                                )}
                                <div className="flex items-center gap-2 text-zinc-100 text-[10px] md:text-xs font-black uppercase tracking-widest">
                                   <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
-                                  {
-                                    (item.chapterCount && item.chapterCount > 0) 
-                                      ? `${item.chapterCount} Eps` 
-                                      : (item.totalEpisode && item.totalEpisode > 0)
-                                        ? `${item.totalEpisode} Eps`
-                                        : (item.playCount && item.playCount !== "1.2M" 
-                                            ? `${item.playCount} Hot` 
-                                            : "Full Eps")
-                                  }
+                                  {item.chapterCount && item.chapterCount > 0 
+                                    ? `${item.chapterCount} Eps` 
+                                    : item.totalEpisode && item.totalEpisode > 0
+                                      ? `${item.totalEpisode} Eps` 
+                                      : "Full Eps"}
                                 </div>
                             </div>
                           </div>
