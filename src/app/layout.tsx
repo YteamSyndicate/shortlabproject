@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import "./globals.css";
 import { LoadingProvider } from "@/components/LoadingContext";
+import LoadingReset from "@/components/LoadingReset";
 import { Suspense } from "react";
 
 const jakarta = Plus_Jakarta_Sans({ 
@@ -20,16 +21,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={`${jakarta.className} antialiased bg-black text-white`}>
         <Suspense fallback={<div className="bg-black min-h-screen" />}>
           <LoadingProvider>
+            <LoadingReset /> 
             {children}
           </LoadingProvider>
         </Suspense>

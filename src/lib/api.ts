@@ -89,7 +89,7 @@ async function fetchData<T>(endpoint: string): Promise<T | null> {
       headers: { 
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 0 } 
+      next: { revalidate: 3600 } 
     });
     
     if (!res.ok) {

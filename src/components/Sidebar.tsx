@@ -21,8 +21,10 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const handleNavigation = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
     onClose();
-    setIsLoading(true);
-    router.push(href);
+    setTimeout(() => {
+      setIsLoading(true);
+      router.push(href);
+    }, 200);
   };
 
   return (

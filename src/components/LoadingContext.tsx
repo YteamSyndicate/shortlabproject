@@ -1,27 +1,13 @@
 "use client";
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { createContext, useContext, useState, useMemo } from "react";
 import Loading from "@/app/loading";
 
 const LoadingContext = createContext({ 
-  setIsLoading: () => {} 
-} as { 
-  setIsLoading: (v: boolean) => void 
+  setIsLoading: (v: boolean) => {} 
 });
 
 export const LoadingProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (isLoading) {
-      const handle = requestAnimationFrame(() => {
-        setIsLoading(false);
-      });
-      return () => cancelAnimationFrame(handle);
-    }
-  }, [pathname, searchParams, isLoading]);
 
   const contextValue = useMemo(() => ({
     setIsLoading: (v: boolean) => setIsLoading(v)
@@ -29,8 +15,13 @@ export const LoadingProvider = ({ children }: { children: React.ReactNode }) => 
 
   return (
     <LoadingContext.Provider value={contextValue}>
-      {isLoading && <Loading />}
-      <div className={isLoading ? "opacity-0" : "opacity-100 transition-opacity duration-300"}>
+      {isLoading && (
+        <div className="fixed inset-0 z-9999 bg-black">
+          <Loading />
+        </div>
+      )}
+
+      <div className={isLoading ? "opacity-0" : "opacity-100 transition-opacity duration-500"}>
         {children}
       </div>
     </LoadingContext.Provider>
