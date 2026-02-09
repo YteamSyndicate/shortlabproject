@@ -11,7 +11,8 @@ import {
   getMeloloHome,
   getMeloloTrending,
   getAllDracinData,
-  getMassiveForyou
+  getMassiveForyou,
+  getMassiveDubIndo
 } from "@/lib/api";
 
 import { type DramaItem, type DramaSection } from "@/lib/types";
@@ -99,8 +100,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     } 
     else if (slug === "dubbing-indonesia") {
       displayTitle = "Dubbing Indonesia";
-      allItems = dubIndo;
-    } 
+      allItems = await getMassiveDubIndo(20).catch(() => []);
+    }
     else {
       displayTitle = slug.replace(/-/g, ' ').toUpperCase();
       const pool = [...trendingDb, ...trendingMl, ...latestDb, ...latestMl, ...dracinItems, ...dubIndo];

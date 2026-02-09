@@ -428,10 +428,10 @@ export async function getVideoStream(vid: string, platform: string = "melolo"): 
 
 export async function getMassiveForyou(): Promise<DramaItem[]> {
   const fetchTasks = [
-    ...Array.from({ length: 10 }, (_, i) => fetchData<unknown>(`dramabox/foryou?page=${i + 1}`)),
-    ...Array.from({ length: 5 }, (_, i) => fetchData<unknown>(`reelshort/foryou?page=${i + 1}`)),
-    ...Array.from({ length: 5 }, (_, i) => fetchData<unknown>(`netshort/foryou?page=${i + 1}`)),
-    ...[0, 20, 40, 60].map(off => fetchData<unknown>(`melolo/foryou?offset=${off}`)),
+    ...Array.from({ length: 30 }, (_, i) => fetchData<unknown>(`dramabox/foryou?page=${i + 1}`)),
+    ...Array.from({ length: 30 }, (_, i) => fetchData<unknown>(`reelshort/foryou?page=${i + 1}`)),
+    ...Array.from({ length: 30 }, (_, i) => fetchData<unknown>(`netshort/foryou?page=${i + 1}`)),
+    ...[0, 20, 40, 60, 80].map(off => fetchData<unknown>(`melolo/foryou?offset=${off}`)),
 
     fetchData<unknown>(`flickreels/foryou?page=1`),
     fetchData<unknown>(`flickreels/foryou?page=2`),
@@ -444,10 +444,10 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
     if (result.status === 'fulfilled' && result.value) {
       let platform: PlatformType = "dramabox";
 
-      if (index < 10) platform = "dramabox";
-      else if (index < 15) platform = "reelshort";
-      else if (index < 20) platform = "netshort";
-      else if (index < 24) platform = "melolo";
+      if (index < 30) platform = "dramabox";
+      else if (index < 60) platform = "reelshort";
+      else if (index < 90) platform = "netshort";
+      else if (index < 95) platform = "melolo";
       else platform = "flickreels";
 
       if (platform === "melolo") {
@@ -469,4 +469,28 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
     .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
     .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i)
     .sort(() => Math.random() - 0.5); 
+}
+
+export async function getMassiveDubIndo(totalPages: number = 30): Promise<DramaItem[]> {
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const classes = ['terpopuler', 'terbaru'];
+  
+  try {
+    const fetchTasks = classes.flatMap(classify => 
+      pages.map(page => fetchData<unknown>(`dramabox/dubindo?classify=${classify}&page=${page}`))
+    );
+
+    const results = await Promise.all(fetchTasks);
+
+    const allItems = results.flatMap(res => 
+      safeExtractList(res).map(b => mapDramaData(b, "dramabox"))
+    );
+
+    return allItems.filter((v, i, a) => 
+      v.bookId && a.findIndex(t => t.bookId === v.bookId) === i
+    );
+  } catch (error) {
+    console.error("Error fetching massive Dub Indo:", error);
+    return [];
+  }
 }
