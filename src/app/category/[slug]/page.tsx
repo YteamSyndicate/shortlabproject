@@ -7,7 +7,6 @@ import AnimationWrapper from "@/components/AnimationWrapper";
 import { 
   getTrendingDrama, 
   getLatestDrama, 
-  getDramaDubIndo,
   getMeloloHome,
   getMeloloTrending,
   getAllDracinData,
@@ -17,7 +16,6 @@ import {
 
 import { type DramaItem, type DramaSection } from "@/lib/types";
 
-// Interface lengkap untuk menampung semua variasi data API
 interface NetshortData extends DramaItem {
   totalEpisode?: number;
   heatScoreShow?: string;
@@ -82,18 +80,20 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     displayTitle = "Pilihan Untukmu";
     allItems = await getMassiveForyou().catch(() => []);
   } 
+  else if (slug === "dubbing-indonesia") {
+    displayTitle = "Dubbing Indonesia";
+    allItems = await getMassiveDubIndo(20).catch(() => []);
+  }
   else {
     const [
       trendingDb, trendingMl, 
       latestDb, latestMl, 
-      dubIndo,
       allDracinRaw
     ] = await Promise.all([
       getTrendingDrama().catch(() => []),
       getMeloloTrending().catch(() => []),
       getLatestDrama().catch(() => []),
       getMeloloHome().catch(() => []),
-      getDramaDubIndo('terpopuler', 1).catch(() => []),
       getAllDracinData().catch(() => []) as Promise<DramaSection[]>
     ]);
 
@@ -107,13 +107,9 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       displayTitle = "Baru Dirilis";
       allItems = [...latestDb, ...latestMl];
     } 
-    else if (slug === "dubbing-indonesia") {
-      displayTitle = "Dubbing Indonesia";
-      allItems = await getMassiveDubIndo(20).catch(() => []);
-    }
     else {
       displayTitle = slug.replace(/-/g, ' ').toUpperCase();
-      const pool = [...trendingDb, ...trendingMl, ...latestDb, ...latestMl, ...dracinItems, ...dubIndo];
+      const pool = [...trendingDb, ...trendingMl, ...latestDb, ...latestMl, ...dracinItems];
       allItems = pool.filter(item => 
         item.genre?.toLowerCase().includes(slug.toLowerCase()) || 
         item.title?.toLowerCase().includes(slug.toLowerCase())
@@ -125,8 +121,9 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const uniqueMap = new Map<string, DramaItem>();
   allItems.forEach(item => {
     const key = `${item.platform}-${item.bookId}`.toLowerCase();
-    // Perbaikan ESLint: Mengganti (item as any) dengan (item as NetshortData)
-    const hasTitle = item.title || (item as NetshortData).shortPlayName;
+    const itemData = item as NetshortData;
+    const hasTitle = itemData.title || itemData.shortPlayName;
+    
     if (!uniqueMap.has(key) && hasTitle) {
       uniqueMap.set(key, item);
     }
@@ -163,12 +160,14 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       <Navbar />
       
       <div className="relative z-10 pt-32 md:pt-44 pb-32 px-6 md:px-12 lg:px-20">
+        {/* Breadcrumb */}
         <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-10 overflow-x-auto whitespace-nowrap no-scrollbar">
           <Link href="/" className="hover:text-red-600 transition-colors">Beranda</Link>
           <span className="text-zinc-800 text-xs">/</span>
           <span className="text-red-600">{displayTitle}</span>
         </div>
 
+        {/* Title Section */}
         <div className="flex items-center gap-2 md:gap-4 mb-12 md:mb-16">
           <div className="w-1 h-8 md:w-1.5 md:h-12 bg-red-600 rounded-full shadow-[0_0_15px_rgba(220,38,38,0.8)] shrink-0" />
           <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter leading-none">
@@ -185,7 +184,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                   const item = baseItem as NetshortData;
                   const finalScore = sanitizeRating(item.score, iIdx);
                   const imageUrl = getImageUrl(item);
-                  
+
                   const displayEps = item.totalEpisode || item.chapterCount;
                   const displayHot = item.heatScoreShow || item.playCount;
                   const displayGenre = item.genre || (item.labelArray && item.labelArray[0]);
@@ -216,12 +215,18 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                               unoptimized 
                               referrerPolicy="no-referrer"
                             />
+                            
+                            {/* Platform Tag */}
                             <div className="absolute top-3 left-3 z-30 bg-red-600 text-white text-[9px] md:text-[9px] font-black px-2 py-1 rounded-md uppercase">
                               {item.platform || 'HOT'}
                             </div>
+
+                            {/* Rating Tag */}
                             <div className="absolute top-3 right-3 z-30 bg-black/60 backdrop-blur-md border border-white/10 text-white px-2 py-1 rounded-md flex items-center gap-1">
                                <span className="text-[9px] md:text-[11px] font-black text-yellow-400">★ {finalScore}</span>
                             </div>
+
+                            {/* Bottom Info */}
                             <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-linear-to-t from-black via-black/80 to-transparent flex flex-col justify-end p-4 md:p-5">
                                {displayGenre && (
                                  <div className="mb-1.5">
@@ -249,6 +254,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               </div>
             </AnimationWrapper>
 
+            {/* Pagination */}
             {totalPages > 1 && (
               <div className="mt-24 flex flex-col items-center gap-8">
                 <div className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em]">
