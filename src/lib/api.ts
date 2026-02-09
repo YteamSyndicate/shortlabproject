@@ -420,7 +420,6 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
   ];
 
   const meloloOffsets = [0, 20, 40, 60, 80, 100];
-  const allItems: DramaItem[] = [];
   const pageTasks = targets.flatMap(t =>
     Array.from({ length: t.total }, (_, i) => ({
       url: `${t.prefix}${i + 1}`,
@@ -438,25 +437,40 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
     allTasks.map(task => fetchData<unknown>(task.url))
   );
 
-  results.forEach((result, index) => {
+  const processedItems: DramaItem[] = [];
+
+  for (let index = 0; index < results.length; index++) {
+    const result = results[index];
+    const task = allTasks[index];
+
     if (result.status === 'fulfilled' && result.value) {
-      const task = allTasks[index];
       if (task.platform === "melolo") {
         const meloloData = result.value as MeloloResponse;
         const books = meloloData?.data?.cell?.books || [];
         books.forEach((b: MeloloBook) => {
-          allItems.push(mapDramaData(b, "melolo"));
+          processedItems.push(mapDramaData(b, "melolo"));
         });
       } else {
         const extracted = safeExtractList(result.value);
-        extracted.forEach((b: Record<string, unknown>) => {
-          allItems.push(mapDramaData(b, task.platform));
-        });
+        const items = await Promise.all(extracted.map(async (b) => {
+          const mapped = mapDramaData(b, task.platform);
+          if (task.platform === "netshort" && mapped.bookId && (!mapped.chapterCount || mapped.chapterCount === 0)) {
+            const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${mapped.bookId}`);
+            if (epRes) {
+              const epData = (epRes.data as Record<string, unknown>) || epRes;
+              mapped.totalEpisode = Number(epData?.totalEpisode || epRes.totalEpisode || 0);
+              mapped.chapterCount = mapped.totalEpisode;
+            }
+          }
+          return mapped;
+        }));
+        
+        processedItems.push(...items);
       }
     }
-  });
+  }
 
-  return allItems
+  return processedItems
     .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
     .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i)
     .sort(() => Math.random() - 0.5);
