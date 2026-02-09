@@ -10,8 +10,8 @@ import {
   getDramaDubIndo,
   getMeloloHome,
   getMeloloTrending,
-  getMeloloForYou,
-  getAllDracinData
+  getAllDracinData,
+  getMassiveForyou
 } from "@/lib/api";
 
 import { type DramaItem, type DramaSection } from "@/lib/types";
@@ -68,48 +68,48 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   let displayTitle = "KATEGORI";
   let allItems: DramaItem[] = [];
 
-  const [
-    trendingDb, trendingMl, 
-    latestDb, latestMl, 
-    foryouMl, 
-    dubIndo,
-    allDracinRaw
-  ] = await Promise.all([
-    getTrendingDrama().catch(() => []),
-    getMeloloTrending().catch(() => []),
-    getLatestDrama().catch(() => []),
-    getMeloloHome().catch(() => []),
-    getMeloloForYou().catch(() => []),
-    getDramaDubIndo('terpopuler', 1).catch(() => []),
-    getAllDracinData().catch(() => []) as Promise<DramaSection[]>
-  ]);
-
-  const dracinItems = allDracinRaw.flatMap(section => section.items || []);
-
-  if (slug === "trending-sekarang" || slug === "trending") {
-    displayTitle = "Trending Sekarang";
-    allItems = [...trendingDb, ...trendingMl];
-  } 
-  else if (slug === "baru-dirilis" || slug === "latest") {
-    displayTitle = "Baru Dirilis";
-    allItems = [...latestDb, ...latestMl];
-  } 
-  else if (slug === "pilihan-untukmu" || slug === "foryou") {
+  if (slug === "pilihan-untukmu" || slug === "foryou" || slug === "rekomendasi") {
     displayTitle = "Pilihan Untukmu";
-    allItems = [...latestDb, ...foryouMl, ...dracinItems];
-  } 
-  else if (slug === "dubbing-indonesia") {
-    displayTitle = "Dubbing Indonesia";
-    allItems = dubIndo;
+    allItems = await getMassiveForyou().catch(() => []);
   } 
   else {
-    displayTitle = slug.replace(/-/g, ' ').toUpperCase();
-    const pool = [...trendingDb, ...trendingMl, ...latestDb, ...latestMl, ...dracinItems, ...dubIndo];
-    allItems = pool.filter(item => 
-      item.genre?.toLowerCase().includes(slug.toLowerCase()) || 
-      item.title?.toLowerCase().includes(slug.toLowerCase())
-    );
-    if (allItems.length === 0) allItems = pool;
+    const [
+      trendingDb, trendingMl, 
+      latestDb, latestMl, 
+      dubIndo,
+      allDracinRaw
+    ] = await Promise.all([
+      getTrendingDrama().catch(() => []),
+      getMeloloTrending().catch(() => []),
+      getLatestDrama().catch(() => []),
+      getMeloloHome().catch(() => []),
+      getDramaDubIndo('terpopuler', 1).catch(() => []),
+      getAllDracinData().catch(() => []) as Promise<DramaSection[]>
+    ]);
+
+    const dracinItems = allDracinRaw.flatMap(section => section.items || []);
+
+    if (slug === "trending-sekarang" || slug === "trending") {
+      displayTitle = "Trending Sekarang";
+      allItems = [...trendingDb, ...trendingMl];
+    } 
+    else if (slug === "baru-dirilis" || slug === "latest") {
+      displayTitle = "Baru Dirilis";
+      allItems = [...latestDb, ...latestMl];
+    } 
+    else if (slug === "dubbing-indonesia") {
+      displayTitle = "Dubbing Indonesia";
+      allItems = dubIndo;
+    } 
+    else {
+      displayTitle = slug.replace(/-/g, ' ').toUpperCase();
+      const pool = [...trendingDb, ...trendingMl, ...latestDb, ...latestMl, ...dracinItems, ...dubIndo];
+      allItems = pool.filter(item => 
+        item.genre?.toLowerCase().includes(slug.toLowerCase()) || 
+        item.title?.toLowerCase().includes(slug.toLowerCase())
+      );
+      if (allItems.length === 0) allItems = pool;
+    }
   }
 
   const uniqueMap = new Map();

@@ -425,3 +425,48 @@ export async function getVideoStream(vid: string, platform: string = "melolo"): 
 
   return data as unknown as StreamPayload;
 }
+
+export async function getMassiveForyou(): Promise<DramaItem[]> {
+  const fetchTasks = [
+    ...Array.from({ length: 10 }, (_, i) => fetchData<unknown>(`dramabox/foryou?page=${i + 1}`)),
+    ...Array.from({ length: 5 }, (_, i) => fetchData<unknown>(`reelshort/foryou?page=${i + 1}`)),
+    ...Array.from({ length: 5 }, (_, i) => fetchData<unknown>(`netshort/foryou?page=${i + 1}`)),
+    ...[0, 20, 40, 60].map(off => fetchData<unknown>(`melolo/foryou?offset=${off}`)),
+
+    fetchData<unknown>(`flickreels/foryou?page=1`),
+    fetchData<unknown>(`flickreels/foryou?page=2`),
+  ];
+
+  const rawResults = await Promise.allSettled(fetchTasks);
+  const allItems: DramaItem[] = [];
+
+  rawResults.forEach((result, index) => {
+    if (result.status === 'fulfilled' && result.value) {
+      let platform: PlatformType = "dramabox";
+
+      if (index < 10) platform = "dramabox";
+      else if (index < 15) platform = "reelshort";
+      else if (index < 20) platform = "netshort";
+      else if (index < 24) platform = "melolo";
+      else platform = "flickreels";
+
+      if (platform === "melolo") {
+        const meloloData = result.value as MeloloResponse;
+        const books = meloloData?.data?.cell?.books || [];
+        books.forEach((b: MeloloBook) => {
+          allItems.push(mapDramaData(b, "melolo"));
+        });
+      } else {
+        const extracted = safeExtractList(result.value);
+        extracted.forEach((b: Record<string, unknown>) => {
+          allItems.push(mapDramaData(b, platform));
+        });
+      }
+    }
+  });
+
+  return allItems
+    .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
+    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i)
+    .sort(() => Math.random() - 0.5); 
+}
