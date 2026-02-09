@@ -70,7 +70,8 @@ export default function WatchClient({ drama }: { drama: DramaDetail }) {
           }
         }
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to fetch video URL:", error);
       setVideoUrl("");
     } finally {
       setIsLoading(false);
@@ -96,7 +97,7 @@ export default function WatchClient({ drama }: { drama: DramaDetail }) {
     setHasStarted(true);
     setTimeout(() => {
       if (videoRef.current) {
-        videoRef.current.play();
+        videoRef.current.play().catch(err => console.log("Autoplay blocked:", err));
       }
     }, 100);
   };
@@ -193,7 +194,7 @@ export default function WatchClient({ drama }: { drama: DramaDetail }) {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
                 </span>
                 <span className="text-white text-[10px] font-black uppercase tracking-widest">Sinopsis</span>
-                <p className="text-zinc-400 text-base md:text-lg leading-relaxed text-justify opacity-90 whitespace-pre-line font-medium pl-8">
+                <p className="text-zinc-400 text-base md:text-lg leading-relaxed text-justify opacity-90 whitespace-pre-line font-medium md:pl-8">
                   {drama.intro || `Sekarang menonton episode ${activeEpisode + 1} dari ${drama.title}. Nikmati kualitas streaming terbaik tanpa gangguan.`}
                 </p>
               </div>

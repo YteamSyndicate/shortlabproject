@@ -1,4 +1,5 @@
 import { extractVideoUrl } from "@/lib/mapper";
+import { RawEpisodeData } from "@/lib/types";
 
 // --- INTERFACES ---
 
@@ -61,7 +62,6 @@ export interface StreamResult {
 }
 
 // --- HELPERS ---
-
 const decodeMelolo = (str: string): string => {
   try {
     if (typeof window === "undefined") {
@@ -73,9 +73,7 @@ const decodeMelolo = (str: string): string => {
   }
 };
 
-/**
- * resolveStream
- */
+
 export const resolveStream = (data: StreamPayload | null, targetVid?: string | number): StreamResult | null => {
   if (!data) return null;
 
@@ -120,7 +118,7 @@ export const resolveStream = (data: StreamPayload | null, targetVid?: string | n
       }
     }
 
-    const mappedUrl = extractVideoUrl(coreData.cdnList);
+    const mappedUrl = extractVideoUrl(coreData as unknown as RawEpisodeData);
     if (mappedUrl) return { url: mappedUrl, type: 'mp4', platform: 'Dramabox' };
   }
   

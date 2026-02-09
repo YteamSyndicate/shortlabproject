@@ -108,15 +108,18 @@ export interface RawDramaData {
 export interface RawEpisodeData {
   id?: string;
   chapterId?: string;
+  episodeId?: string;
   item_id?: string;
   chapterName?: string;
   name?: string;
+  title?: string;
   chapterIndex?: number;
   chapter_index?: string | number;
   vid_index?: number;
   index?: number;
   isCharge?: number;
   is_lock?: number;
+  isLocked?: boolean;
   vid?: string;
   main_url?: string;
   video_url?: string;
@@ -124,10 +127,21 @@ export interface RawEpisodeData {
   m3u8_url?: string;
   external_audio_h264_m3u8?: string;
   raw?: { videoUrl?: string };
+  playVoucher?: string;
+  videoList?: Array<{
+    url: string;
+    quality: number;
+    encode: string;
+    bitrate?: string;
+  }>;
   cdnList?: Array<{
     url?: string;
     isDefault?: number;
-    videoPathList?: Array<{ quality: number; videoPath: string; isDefault: number }>;
+    videoPathList?: Array<{ 
+      quality: number; 
+      videoPath: string; 
+      isDefault: number 
+    }>;
   }>;
 }
 

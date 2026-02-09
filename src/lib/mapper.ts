@@ -70,18 +70,25 @@ export function mapDramaData(rawItem: Record<string, unknown>, platformOverride?
   };
 }
 
-export function extractVideoUrl(cdnList: RawEpisodeData['cdnList']): string {
-  if (!cdnList || !Array.isArray(cdnList) || cdnList.length === 0) return "";
-
-  const defaultCdn = (cdnList.find((c) => (c as Record<string, unknown>).isDefault === 1) || cdnList[0]) as Record<string, unknown>;
-
-  if (defaultCdn.videoPathList && Array.isArray(defaultCdn.videoPathList) && defaultCdn.videoPathList.length > 0) {
-    const pathList = defaultCdn.videoPathList as Record<string, unknown>[];
-    const video = pathList.find((v) => v.quality === 720) || 
-                  pathList.find((v) => v.isDefault === 1) || 
-                  pathList[0];
-    return String(video?.videoPath || "");
+export function extractVideoUrl(ep: RawEpisodeData): string {
+  if (!ep) return "";
+  if (ep.raw?.videoUrl) return ep.raw.videoUrl;
+  if (ep.playVoucher) return ep.playVoucher;
+  if (ep.videoList && ep.videoList.length > 0) {
+    const h264 = ep.videoList.find(v => v.encode === "H264");
+    const v720 = ep.videoList.find(v => v.quality === 720);
+    return h264?.url || v720?.url || ep.videoList[0].url;
   }
 
-  return String(defaultCdn.url || "");
+  if (ep.cdnList && ep.cdnList.length > 0) {
+    const defaultCdn = ep.cdnList.find(c => c.isDefault === 1) || ep.cdnList[0];
+    if (defaultCdn.videoPathList && defaultCdn.videoPathList.length > 0) {
+      const v720 = defaultCdn.videoPathList.find(v => v.quality === 720);
+      const vDefault = defaultCdn.videoPathList.find(v => v.isDefault === 1);
+      return v720?.videoPath || vDefault?.videoPath || defaultCdn.videoPathList[0].videoPath;
+    }
+    return defaultCdn.url || "";
+  }
+
+  return ep.main_url || ep.videoUrl || ep.video_url || "";
 }

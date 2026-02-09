@@ -2,6 +2,7 @@ import { getDramaDetail } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WatchClient from "./WatchClient";
+import Link from "next/link";
 
 interface PageProps {
   params: Promise<{ id: string; path: string }>;
@@ -22,6 +23,13 @@ export default async function WatchPage({ params }: PageProps) {
         <p className="text-zinc-500 text-xs font-bold uppercase tracking-[0.3em] mb-10">
           Drama tidak ditemukan atau link salah.
         </p>
+
+        <Link 
+          href="/" 
+          className="text-red-600 font-black uppercase tracking-widest hover:underline text-[10px]"
+        >
+          Kembali ke Beranda
+        </Link>
       </div>
     );
   }

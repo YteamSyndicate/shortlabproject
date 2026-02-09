@@ -20,15 +20,29 @@ interface ExpandableTextProps {
   platform?: string; 
 }
 
-interface ApiResponse {
+interface FlickReelsData {
   drama?: {
     description?: string;
     labels?: string[];
     chapterCount?: number;
   };
+}
+
+interface NetshortData {
   shotIntroduce?: string;
   shortPlayLabels?: string[];
   totalEpisode?: number;
+}
+
+type ApiResponse = FlickReelsData & NetshortData;
+
+function sanitize(val: unknown, fallback: string): string;
+function sanitize(val: unknown, fallback: number): number;
+function sanitize(val: unknown, fallback: string | number): string | number {
+  if (val === null || val === undefined || val === "undefined" || val === "null" || val === "") {
+    return fallback;
+  }
+  return val as string | number;
 }
 
 export default function ExpandableText({ 
@@ -46,17 +60,10 @@ export default function ExpandableText({
 }: ExpandableTextProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const sanitize = (val: string | number | null | undefined, fallback: string | number = ""): string | number => {
-    if (val === null || val === undefined || val === "undefined" || val === "null" || val === "") {
-      return fallback;
-    }
-    return val;
-  };
-
   const [detailData, setDetailData] = useState({
-    synopsis: String(sanitize(initialText, "Tonton keseruan ceritanya sekarang.")),
-    tag: String(sanitize(initialTag, "Drama")),
-    episodes: Number(sanitize(initialChapterCount, 0))
+    synopsis: sanitize(initialText, "Tonton keseruan ceritanya sekarang."),
+    tag: sanitize(initialTag, "Drama"),
+    episodes: sanitize(initialChapterCount, 0)
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -78,12 +85,6 @@ export default function ExpandableText({
         : `https://api.sansekai.my.id/api/netshort/allepisode?shortPlayId=${bookId}`;
 
       const res = await fetch(url);
-      
-      if (res.status === 429) {
-        console.warn("Rate limit hit, using fallback data");
-        return;
-      }
-
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const data: ApiResponse = await res.json();
@@ -91,15 +92,15 @@ export default function ExpandableText({
       if (data) {
         if (platform === 'flickreels' && data.drama) {
           setDetailData({
-            synopsis: String(sanitize(data.drama.description, initialText)),
-            tag: String(sanitize(data.drama.labels?.[0], initialTag)),
-            episodes: Number(sanitize(data.drama.chapterCount, initialChapterCount || 0))
+            synopsis: sanitize(data.drama.description, initialText),
+            tag: sanitize(data.drama.labels?.[0], initialTag || "Drama"),
+            episodes: sanitize(data.drama.chapterCount, initialChapterCount || 0)
           });
         } else if (platform === 'netshort') {
           setDetailData({
-            synopsis: String(sanitize(data.shotIntroduce, initialText)),
-            tag: String(sanitize(data.shortPlayLabels?.[0], initialTag)),
-            episodes: Number(sanitize(data.totalEpisode, initialChapterCount || 0))
+            synopsis: sanitize(data.shotIntroduce, initialText),
+            tag: sanitize(data.shortPlayLabels?.[0], initialTag || "Drama"),
+            episodes: sanitize(data.totalEpisode, initialChapterCount || 0)
           });
         }
         setHasFetched(true);
@@ -123,7 +124,8 @@ export default function ExpandableText({
   useEffect(() => {
     if (isOpen) {
       const preventScroll = (e: WheelEvent | TouchEvent) => {
-        if (!(e.target as HTMLElement).closest(".custom-scrollbar")) {
+        const target = e.target as HTMLElement;
+        if (!target.closest(".custom-scrollbar")) {
           if (e.cancelable) e.preventDefault();
         }
       };
@@ -156,7 +158,7 @@ export default function ExpandableText({
           >
             <button 
               onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 z-100 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center hover:bg-red-600 transition-all shadow-lg"
+              className="absolute top-4 right-4 z-100 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center hover:bg-red-600 transition-all shadow-lg text-white"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path d="M6 18L18 6M6 6l12 12"/>
@@ -167,9 +169,9 @@ export default function ExpandableText({
               <div className="relative h-72 md:h-full bg-zinc-800 overflow-hidden shrink-0 ">
                 <Image 
                   src={modalImageUrl} 
-                  alt={title || "Cover Image"} 
+                  alt={title} 
                   fill 
-                  className="object-cover object-top md:object-cover" 
+                  className="object-cover object-top" 
                   priority 
                   unoptimized 
                   referrerPolicy="no-referrer"
@@ -207,11 +209,7 @@ export default function ExpandableText({
                     </div>
 
                     <div className="px-3 py-1.5 md:px-4 md:py-2 bg-white/5 rounded-xl border border-white/10 text-[9px] md:text-[10px] font-black text-emerald-400 flex items-center shadow-inner tracking-widest uppercase">
-                      {detailData.episodes > 0 ? (
-                        <>{detailData.episodes} EPS</>
-                      ) : (
-                        <span>FULL EPS</span>
-                      )}
+                      {detailData.episodes > 0 ? `${detailData.episodes} EPS` : "FULL EPS"}
                     </div>
                   </div>
 
@@ -263,8 +261,8 @@ export default function ExpandableText({
                <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{viewers} Views</span>
             </div>
             <p className="text-zinc-400 text-xs md:text-base line-clamp-2 md:line-clamp-3 leading-relaxed">
-            {detailData.synopsis}
-          </p>
+              {detailData.synopsis}
+            </p>
             <span className="text-white/20 text-[10px] font-black uppercase mt-3 group-hover:text-red-500 transition-colors inline-block tracking-widest">
               Detail Sinopsis →
             </span>

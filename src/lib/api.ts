@@ -1,5 +1,5 @@
-import { DramaItem, DramaSection, DramaDetail, PlatformType,  MeloloBook, MeloloResponse,} from "./types";
-import { mapDramaData } from "./mapper";
+import { DramaItem, DramaSection, DramaDetail, PlatformType,  MeloloBook, MeloloResponse, RawEpisodeData} from "./types";
+import { mapDramaData, extractVideoUrl } from "./mapper";
 import { StreamPayload } from "@/utils/streamResolver";
 
 const getBaseUrl = () => {
@@ -308,34 +308,20 @@ export async function getDramaDetail(platform: string, id: string): Promise<Dram
     return {
       ...mappedBase,
       bookId: id,
-      title: mappedBase.title || String(info?.title || "").toUpperCase(),
-      intro: mappedBase.intro || String(info?.introduction || info?.description || "Sinopsis tidak tersedia."),
-      chapterCount: rawEpisodes.length > 0 ? rawEpisodes.length : Number(info?.totalEpisodes || 0), 
+      title: mappedBase.title || String(info?.title || info?.shortPlayName || info?.bookName || "").toUpperCase(),
+      intro: mappedBase.intro || String(info?.introduction || info?.description || info?.shotIntroduce || "Sinopsis tidak tersedia."),
+      chapterCount: rawEpisodes.length > 0 ? rawEpisodes.length : Number(info?.totalEpisodes || info?.totalEpisode || 0),      
       chapters: rawEpisodes.map((ep: Record<string, unknown>, idx: number) => {
-        let videoUrl = "";
-
-        if (ep.cdnList && Array.isArray(ep.cdnList)) {
-            const cdnList = ep.cdnList as Record<string, unknown>[];
-            const cdn = cdnList.find(c => c.isDefault === 1) || cdnList[0];
-            if (cdn && cdn.videoPathList && Array.isArray(cdn.videoPathList)) {
-                const pathList = cdn.videoPathList as Record<string, unknown>[];
-                const video = pathList.find(v => v.quality === 720) || pathList[0];
-                videoUrl = String(video?.videoPath || "");
-            }
-        } 
-        else if (Array.isArray(ep.videoList)) {
-            const list = ep.videoList as Record<string, unknown>[];
-            const h264 = list.find(v => String(v.encode).toUpperCase() === "H264");
-            videoUrl = String(h264?.url || list[0]?.url || "");
-        }
+        const episodeData = ep as unknown as RawEpisodeData;
+        const videoUrl = extractVideoUrl(episodeData);
 
         return {
-          chapterId: String(ep.chapterId || ep.episodeId || ep.id || idx),
-          title: String(ep.chapterName || ep.title || `Episode ${idx + 1}`),
+          chapterId: String(episodeData.chapterId || episodeData.episodeId || episodeData.id || idx),
+          title: String(episodeData.chapterName || episodeData.title || episodeData.name || `Episode ${idx + 1}`),
           url: videoUrl,
           sort: idx + 1,
-          isLocked: !!(ep.isCharge === 1 || ep.isLocked || ep.isLock),
-          vid: String(ep.chapterId || ep.episodeId || ep.id || "")
+          isLocked: !!(episodeData.isCharge === 1 || episodeData.isLocked || episodeData.is_lock || episodeData.is_lock === 1),
+          vid: String(episodeData.vid || episodeData.id || "")
         };
       })
     };
@@ -435,7 +421,7 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
 
   const meloloOffsets = [0, 20, 40, 60, 80, 100];
   const allItems: DramaItem[] = [];
-  const pageTasks = targets.flatMap(t => 
+  const pageTasks = targets.flatMap(t =>
     Array.from({ length: t.total }, (_, i) => ({
       url: `${t.prefix}${i + 1}`,
       platform: t.platform as PlatformType
@@ -448,7 +434,6 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
   }));
 
   const allTasks = [...pageTasks, ...meloloTasks];
-
   const results = await Promise.allSettled(
     allTasks.map(task => fetchData<unknown>(task.url))
   );
@@ -456,7 +441,6 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
   results.forEach((result, index) => {
     if (result.status === 'fulfilled' && result.value) {
       const task = allTasks[index];
-      
       if (task.platform === "melolo") {
         const meloloData = result.value as MeloloResponse;
         const books = meloloData?.data?.cell?.books || [];
@@ -483,17 +467,14 @@ export async function getMassiveDubIndo(totalPages: number = 100): Promise<Drama
   const classes = ['terpopuler', 'terbaru'];
   
   try {
-    const fetchTasks = classes.flatMap(classify => 
+    const fetchTasks = classes.flatMap(classify =>
       pages.map(page => fetchData<unknown>(`dramabox/dubindo?classify=${classify}&page=${page}`))
     );
-
     const results = await Promise.all(fetchTasks);
-
-    const allItems = results.flatMap(res => 
+    const allItems = results.flatMap(res =>
       safeExtractList(res).map(b => mapDramaData(b, "dramabox"))
     );
-
-    return allItems.filter((v, i, a) => 
+    return allItems.filter((v, i, a) =>
       v.bookId && a.findIndex(t => t.bookId === v.bookId) === i
     );
   } catch (error) {
