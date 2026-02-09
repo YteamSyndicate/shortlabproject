@@ -17,6 +17,15 @@ import {
 
 import { type DramaItem, type DramaSection } from "@/lib/types";
 
+// Interface lengkap untuk menampung semua variasi data API
+interface NetshortData extends DramaItem {
+  totalEpisode?: number;
+  heatScoreShow?: string;
+  labelArray?: string[];
+  shortPlayName?: string;
+  shortPlayCover?: string;
+}
+
 interface ImageData {
   cover?: string;
   thumb_url?: string;
@@ -113,19 +122,20 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     }
   }
 
-  const uniqueMap = new Map();
+  const uniqueMap = new Map<string, DramaItem>();
   allItems.forEach(item => {
     const key = `${item.platform}-${item.bookId}`.toLowerCase();
-    if (!uniqueMap.has(key) && item.title) {
+    // Perbaikan ESLint: Mengganti (item as any) dengan (item as NetshortData)
+    const hasTitle = item.title || (item as NetshortData).shortPlayName;
+    if (!uniqueMap.has(key) && hasTitle) {
       uniqueMap.set(key, item);
     }
   });
   
-  allItems = shuffleItems(Array.from(uniqueMap.values()));
-
-  const totalItems = allItems.length;
+  const shuffledItems = shuffleItems(Array.from(uniqueMap.values()));
+  const totalItems = shuffledItems.length;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const paginatedItems = allItems.slice(
+  const paginatedItems = shuffledItems.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -153,14 +163,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       <Navbar />
       
       <div className="relative z-10 pt-32 md:pt-44 pb-32 px-6 md:px-12 lg:px-20">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-10 overflow-x-auto whitespace-nowrap no-scrollbar">
           <Link href="/" className="hover:text-red-600 transition-colors">Beranda</Link>
           <span className="text-zinc-800 text-xs">/</span>
           <span className="text-red-600">{displayTitle}</span>
         </div>
 
-        {/* Title */}
         <div className="flex items-center gap-2 md:gap-4 mb-12 md:mb-16">
           <div className="w-1 h-8 md:w-1.5 md:h-12 bg-red-600 rounded-full shadow-[0_0_15px_rgba(220,38,38,0.8)] shrink-0" />
           <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter leading-none">
@@ -173,9 +181,16 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           <>
             <AnimationWrapper key={currentPage}>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
-                {paginatedItems.map((item, iIdx) => {
+                {paginatedItems.map((baseItem, iIdx) => {
+                  const item = baseItem as NetshortData;
                   const finalScore = sanitizeRating(item.score, iIdx);
                   const imageUrl = getImageUrl(item);
+                  
+                  const displayEps = item.totalEpisode || item.chapterCount;
+                  const displayHot = item.heatScoreShow || item.playCount;
+                  const displayGenre = item.genre || (item.labelArray && item.labelArray[0]);
+                  const displayTitleText = item.title || item.shortPlayName;
+
                   const finalIntro = item.intro && item.intro !== "undefined" && item.intro !== "null" && item.intro !== ""
                     ? item.intro 
                     : "Nikmati alur cerita drama pendek terbaik dengan kualitas visual memukau. Saksikan kisah penuh emosi, romansa, dan dendam yang dikemas secara ringkas namun mendalam.";
@@ -186,7 +201,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                         {...item} 
                         cover={imageUrl} 
                         platform={item.platform} 
-                        tag={item.genre || "Drama"} 
+                        tag={displayGenre || "Drama"} 
                         text={finalIntro} 
                         score={finalScore} 
                         variant="card"
@@ -195,7 +210,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                           <div className="relative aspect-3/4 overflow-hidden bg-zinc-900 rounded-2xl border border-white/5 transition-all duration-500 shadow-2xl group-hover:border-red-600/50">
                             <Image 
                               src={imageUrl} 
-                              alt={item.title || "Cover"} 
+                              alt={displayTitleText || "Cover"} 
                               fill 
                               className="object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110" 
                               unoptimized 
@@ -208,23 +223,23 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                                <span className="text-[9px] md:text-[11px] font-black text-yellow-400">★ {finalScore}</span>
                             </div>
                             <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-linear-to-t from-black via-black/80 to-transparent flex flex-col justify-end p-4 md:p-5">
-                               {item.genre && (
+                               {displayGenre && (
                                  <div className="mb-1.5">
-                                   <span className={`${getGenreBg(item.genre)} text-white text-[8px] md:text-[9px] font-black uppercase px-2 py-0.5 rounded-sm tracking-widest inline-block shadow-lg`}>
-                                     {item.genre}
+                                   <span className={`${getGenreBg(displayGenre)} text-white text-[8px] md:text-[9px] font-black uppercase px-2 py-0.5 rounded-sm tracking-widest inline-block shadow-lg`}>
+                                     {displayGenre}
                                    </span>
                                  </div>
                                )}
                                <div className="flex items-center gap-2 text-zinc-100 text-[10px] md:text-xs font-black uppercase tracking-widest">
                                   <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
-                                  {item.chapterCount && item.chapterCount > 0 
-                                    ? `${item.chapterCount} Eps` 
-                                    : (item.playCount && item.playCount !== "1.2M" ? `${item.playCount} Hot` : "Full Eps")}
+                                  {displayEps && Number(displayEps) > 0 
+                                    ? `${displayEps} Eps` 
+                                    : (displayHot && displayHot !== "0" ? `${displayHot} Hot` : "Full Eps")}
                                 </div>
                             </div>
                           </div>
                           <h4 className="mt-4 font-black text-xs md:text-lg text-zinc-100 group-hover:text-red-500 transition-colors line-clamp-1 uppercase tracking-tight">
-                            {item.title}
+                            {displayTitleText}
                           </h4>
                         </div>
                       </ExpandableText>
@@ -234,7 +249,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               </div>
             </AnimationWrapper>
 
-            {/* Pagination Section */}
             {totalPages > 1 && (
               <div className="mt-24 flex flex-col items-center gap-8">
                 <div className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em]">
