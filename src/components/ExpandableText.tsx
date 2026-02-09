@@ -13,15 +13,17 @@ interface ExpandableTextProps {
   cover?: string;
   score?: string;
   viewers?: string;
-  tag?: string; 
+  tag?: string;
   chapterCount?: number;
   variant?: "hero" | "card";
   children?: ReactNode;
-  platform?: string; 
+  platform?: string;
 }
 
+// Interface yang disesuaikan dengan JSON asli API kamu
 interface FlickReelsData {
   drama?: {
+    title?: string;
     description?: string;
     labels?: string[];
     chapterCount?: number;
@@ -32,8 +34,10 @@ interface NetshortData {
   shotIntroduce?: string;
   shortPlayLabels?: string[];
   totalEpisode?: number;
+  shortPlayName?: string;
 }
 
+// Gabungan tipe response
 type ApiResponse = FlickReelsData & NetshortData;
 
 function sanitize(val: unknown, fallback: string): string;
@@ -45,30 +49,31 @@ function sanitize(val: unknown, fallback: string | number): string | number {
   return val as string | number;
 }
 
-export default function ExpandableText({ 
-  text: initialText, 
-  title, 
-  bookId, 
-  cover, 
-  score, 
-  viewers = "1.2M", 
-  tag: initialTag, 
-  chapterCount: initialChapterCount, 
-  variant = "hero", 
+export default function ExpandableText({
+  text: initialText,
+  title,
+  bookId,
+  cover,
+  score,
+  viewers = "1.2M",
+  tag: initialTag,
+  chapterCount: initialChapterCount,
+  variant = "hero",
   children,
   platform = "dramabox"
 }: ExpandableTextProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Inisialisasi data dengan fallback dari props agar tidak kosong saat loading
   const [detailData, setDetailData] = useState({
     synopsis: sanitize(initialText, "Tonton keseruan ceritanya sekarang."),
     tag: sanitize(initialTag, "Drama"),
     episodes: sanitize(initialChapterCount, 0)
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
-  
+
   const router = useRouter();
   const modalImageUrl = cover || "https://images.unsplash.com/photo-1598897349489-bc4746421e5a?q=80&w=1000&auto=format&fit=crop";
 
@@ -80,7 +85,7 @@ export default function ExpandableText({
 
     try {
       setIsLoading(true);
-      const url = platform === 'flickreels' 
+      const url = platform === 'flickreels'
         ? `https://api.sansekai.my.id/api/flickreels/detailAndAllEpisode?id=${bookId}`
         : `https://api.sansekai.my.id/api/netshort/allepisode?shortPlayId=${bookId}`;
 
@@ -88,8 +93,9 @@ export default function ExpandableText({
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
       const data: ApiResponse = await res.json();
-      
+
       if (data) {
+        // PERBAIKAN LOGIKA PEMETAAN DISINI
         if (platform === 'flickreels' && data.drama) {
           setDetailData({
             synopsis: sanitize(data.drama.description, initialText),
@@ -98,7 +104,7 @@ export default function ExpandableText({
           });
         } else if (platform === 'netshort') {
           setDetailData({
-            synopsis: sanitize(data.shotIntroduce, initialText),
+            synopsis: sanitize(data.shotIntroduce, initialText), // Menggunakan shotIntroduce sesuai JSON Netshort
             tag: sanitize(data.shortPlayLabels?.[0], initialTag || "Drama"),
             episodes: sanitize(data.totalEpisode, initialChapterCount || 0)
           });
@@ -121,19 +127,12 @@ export default function ExpandableText({
     }
   }, [isOpen, fetchDetail, hasFetched]);
 
+  // Handle prevent scroll
   useEffect(() => {
     if (isOpen) {
-      const preventScroll = (e: WheelEvent | TouchEvent) => {
-        const target = e.target as HTMLElement;
-        if (!target.closest(".custom-scrollbar")) {
-          if (e.cancelable) e.preventDefault();
-        }
-      };
-      window.addEventListener("wheel", preventScroll, { passive: false });
-      window.addEventListener("touchmove", preventScroll, { passive: false });
+      document.body.style.overflow = "hidden";
       return () => {
-        window.removeEventListener("wheel", preventScroll);
-        window.removeEventListener("touchmove", preventScroll);
+        document.body.style.overflow = "unset";
       };
     }
   }, [isOpen]);
@@ -142,7 +141,7 @@ export default function ExpandableText({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 pt-16 pointer-events-none">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -150,30 +149,30 @@ export default function ExpandableText({
             className="absolute inset-0 bg-black/95 backdrop-blur-xl pointer-events-auto"
           />
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 30 }}
             className="relative bg-zinc-900 border border-white/10 w-full max-w-5xl h-[85vh] md:h-[70vh] overflow-hidden rounded-3xl shadow-2xl flex flex-col pointer-events-auto font-sans"
           >
-            <button 
+            <button
               onClick={() => setIsOpen(false)}
               className="absolute top-4 right-4 z-100 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center hover:bg-red-600 transition-all shadow-lg text-white"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path d="M6 18L18 6M6 6l12 12"/>
+                <path d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-[42%_1fr] min-h-0 overflow-y-auto md:overflow-hidden custom-scrollbar">
               <div className="relative h-72 md:h-full bg-zinc-800 overflow-hidden shrink-0 ">
-                <Image 
-                  src={modalImageUrl} 
-                  alt={title} 
-                  fill 
-                  className="object-cover object-top" 
-                  priority 
-                  unoptimized 
+                <Image
+                  src={modalImageUrl}
+                  alt={title}
+                  fill
+                  className="object-cover object-top"
+                  priority
+                  unoptimized
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-linear-to-t from-zinc-900 via-zinc-900/20 to-transparent md:hidden" />
@@ -203,7 +202,7 @@ export default function ExpandableText({
                         {score}
                       </div>
                     )}
-                    
+
                     <div className="px-3 py-1.5 md:px-4 md:py-2 bg-white/5 rounded-xl border border-white/10 text-[9px] md:text-[10px] font-black text-cyan-400 flex items-center shadow-inner tracking-widest uppercase">
                       {viewers} <span className="ml-1 opacity-40 text-white">VIEWS</span>
                     </div>
@@ -225,7 +224,7 @@ export default function ExpandableText({
                 </div>
 
                 <div className="sticky bottom-0 md:relative p-5 md:p-12 md:pt-4 bg-zinc-900/95 backdrop-blur-md md:backdrop-blur-none border-t border-white/5 md:border-t-0 shrink-0 z-10">
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.01, backgroundColor: "#ffffff", color: "#000000" }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
@@ -254,11 +253,11 @@ export default function ExpandableText({
         {variant === "card" ? children : (
           <div className="cursor-pointer group font-sans">
             <div className="flex items-center gap-2 mb-2">
-               <svg className="w-3.5 h-3.5 text-cyan-400 shadow-sm" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-               </svg>
-               <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{viewers} Views</span>
+              <svg className="w-3.5 h-3.5 text-cyan-400 shadow-sm" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span className="text-cyan-400 text-[10px] font-black uppercase tracking-widest">{viewers} Views</span>
             </div>
             <p className="text-zinc-400 text-xs md:text-base line-clamp-2 md:line-clamp-3 leading-relaxed">
               {detailData.synopsis}
