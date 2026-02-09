@@ -17,13 +17,10 @@ import {
 
 import { type DramaItem, type DramaSection } from "@/lib/types";
 
-// Interface untuk memastikan TS mengenali properti dari berbagai platform
 interface NetshortExtended extends DramaItem {
   totalEpisode?: number;
-  chapterCount?: number;
   heatScoreShow?: string;
   labelArray?: string[];
-  playCount?: string;
 }
 
 interface ImageData {
@@ -180,14 +177,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             <AnimationWrapper key={currentPage}>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
                 {paginatedItems.map((baseItem, iIdx) => {
+                  // Type Casting ke NetshortExtended agar TS bisa baca totalEpisode, dll.
                   const item = baseItem as NetshortExtended;
                   
                   const finalScore = sanitizeRating(item.score, iIdx);
                   const imageUrl = getImageUrl(item);
                   
-                  // LOGIKA PERBAIKAN: Cek totalEpisode (Netshort) atau chapterCount (Lainnya)
-                  const displayEps = item.totalEpisode || item.chapterCount;
-                  const displayHot = item.heatScoreShow || item.playCount;
                   const displayGenre = item.genre || (item.labelArray && item.labelArray[0]);
 
                   const finalIntro = item.intro && item.intro !== "undefined" && item.intro !== "null" && item.intro !== ""
@@ -204,8 +199,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                         text={finalIntro} 
                         score={finalScore} 
                         variant="card"
-                        // Pastikan chapterCount dikirim agar client-side sinkron
-                        chapterCount={displayEps}
                       >
                         <div className="group cursor-pointer">
                           <div className="relative aspect-3/4 overflow-hidden bg-zinc-900 rounded-2xl border border-white/5 transition-all duration-500 shadow-2xl group-hover:border-red-600/50">
@@ -233,10 +226,9 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                                )}
                                <div className="flex items-center gap-2 text-zinc-100 text-[10px] md:text-xs font-black uppercase tracking-widest">
                                   <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
-                                  {/* TAMPILAN EPISODE YANG SUDAH DIPERBAIKI */}
-                                  {displayEps && Number(displayEps) > 0 
-                                    ? `${displayEps} Eps` 
-                                    : (displayHot && displayHot !== "1.2M" ? `${displayHot} Hot` : "Full Eps")}
+                                  {item.chapterCount && item.chapterCount > 0 
+                                    ? `${item.chapterCount} Eps` 
+                                    : (item.playCount && item.playCount !== "1.2M" ? `${item.playCount} Hot` : "Full Eps")}
                                 </div>
                             </div>
                           </div>
