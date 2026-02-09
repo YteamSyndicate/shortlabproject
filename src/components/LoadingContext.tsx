@@ -1,39 +1,40 @@
 "use client";
-import { createContext, useContext, useState, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Loading from "@/app/loading";
 
-export interface LoadingContextType {
-  isLoading: boolean;
-  setIsLoading: (v: boolean) => void;
-}
-
-const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
+const LoadingContext = createContext({ 
+  setIsLoading: () => {} 
+} as { 
+  setIsLoading: (v: boolean) => void 
+});
 
 export const LoadingProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (isLoading) {
+      const handle = requestAnimationFrame(() => {
+        setIsLoading(false);
+      });
+      return () => cancelAnimationFrame(handle);
+    }
+  }, [pathname, searchParams, isLoading]);
 
   const contextValue = useMemo(() => ({
-    isLoading,
     setIsLoading: (v: boolean) => setIsLoading(v)
-  }), [isLoading]);
+  }), []);
 
   return (
     <LoadingContext.Provider value={contextValue}>
-      {isLoading && (
-        <div className="fixed inset-0 z-9999 bg-black">
-           <Loading /> 
-        </div>
-      )}
-
-      <div className={isLoading ? "opacity-0 invisible h-0" : "opacity-100 transition-opacity duration-300"}>
+      {isLoading && <Loading />}
+      <div className={isLoading ? "opacity-0" : "opacity-100 transition-opacity duration-300"}>
         {children}
       </div>
     </LoadingContext.Provider>
   );
 };
 
-export const useLoading = () => {
-  const context = useContext(LoadingContext);
-  if (!context) throw new Error("useLoading must be used within a LoadingProvider");
-  return context;
-};
+export const useLoading = () => useContext(LoadingContext);
