@@ -1,7 +1,5 @@
 "use client";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLoading } from "@/components/LoadingContext";
 
 interface PaginationProps {
   currentPage: number;
@@ -11,12 +9,10 @@ interface PaginationProps {
 
 export default function Pagination({ currentPage, totalPages, slug }: PaginationProps) {
   const router = useRouter();
-  const { setIsLoading } = useLoading();
 
-  const handleNav = (e: React.MouseEvent, href: string) => {
-    e.preventDefault();
-    setIsLoading(true);
-    router.push(href);
+  const handleNav = (pageNum: number) => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    router.push(`/category/${slug}?page=${pageNum}`);
   };
 
   const showMax = 5;
@@ -35,26 +31,19 @@ export default function Pagination({ currentPage, totalPages, slug }: Pagination
       </div>
 
       <div className="flex items-center justify-center gap-2 md:gap-4">
-        {currentPage > 1 ? (
-          <Link
-            href={`/category/${slug}?page=${currentPage - 1}`}
-            onClick={(e) => handleNav(e, `/category/${slug}?page=${currentPage - 1}`)}
-            className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:border-red-600 transition-all shadow-xl"
-          >
-            ← <span className="hidden md:inline ml-2 tracking-widest">Prev</span>
-          </Link>
-        ) : (
-          <div className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900/50 border border-white/5 text-zinc-800 cursor-not-allowed">
-            ← <span className="hidden md:inline ml-2 tracking-widest">Prev</span>
-          </div>
-        )}
+        <button
+          onClick={() => handleNav(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:border-red-600 transition-all shadow-xl disabled:opacity-20 disabled:cursor-not-allowed"
+        >
+          ← <span className="hidden md:inline ml-2 tracking-widest">Prev</span>
+        </button>
 
         <div className="flex items-center gap-2">
           {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((pageNum) => (
-            <Link
+            <button
               key={`page-${pageNum}`}
-              href={`/category/${slug}?page=${pageNum}`}
-              onClick={(e) => handleNav(e, `/category/${slug}?page=${pageNum}`)}
+              onClick={() => handleNav(pageNum)}
               className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl font-black text-xs transition-all duration-500 border ${
                 currentPage === pageNum
                   ? "bg-red-600 border-red-600 text-white shadow-[0_0_30px_rgba(220,38,38,0.6)] scale-110 z-10"
@@ -62,23 +51,17 @@ export default function Pagination({ currentPage, totalPages, slug }: Pagination
               }`}
             >
               {pageNum}
-            </Link>
+            </button>
           ))}
         </div>
-
-        {currentPage < totalPages ? (
-          <Link
-            href={`/category/${slug}?page=${currentPage + 1}`}
-            onClick={(e) => handleNav(e, `/category/${slug}?page=${currentPage + 1}`)}
-            className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:border-red-600 transition-all shadow-xl"
-          >
-            <span className="hidden md:inline mr-2 tracking-widest">Next</span> →
-          </Link>
-        ) : (
-          <div className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900/50 border border-white/5 text-zinc-800 cursor-not-allowed">
-            <span className="hidden md:inline mr-2 tracking-widest">Next</span> →
-          </div>
-        )}
+        
+        <button
+          onClick={() => handleNav(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:border-red-600 transition-all shadow-xl disabled:opacity-20 disabled:cursor-not-allowed"
+        >
+          <span className="hidden md:inline mr-2 tracking-widest">Next</span> →
+        </button>
       </div>
     </div>
   );

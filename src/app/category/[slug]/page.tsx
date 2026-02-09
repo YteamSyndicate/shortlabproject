@@ -134,7 +134,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const finalItemsPool = Array.from(uniqueMap.values());
   const totalPages = isMassiveCategory ? 50 : Math.ceil(finalItemsPool.length / ITEMS_PER_PAGE); 
   const paginatedItems = isMassiveCategory 
-    ? finalItemsPool
+    ? finalItemsPool.slice(0, ITEMS_PER_PAGE)
     : shuffleItems(finalItemsPool).slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const getGenreBg = (genre: string) => {
