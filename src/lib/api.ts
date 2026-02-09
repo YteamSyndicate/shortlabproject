@@ -1,4 +1,4 @@
-import { DramaItem, DramaSection, DramaDetail, PlatformType,  MeloloBook, MeloloResponse,} from "./types";
+import { DramaItem, DramaSection, DramaDetail, PlatformType, MeloloBook, MeloloResponse } from "./types";
 import { mapDramaData } from "./mapper";
 import { StreamPayload } from "@/utils/streamResolver";
 
@@ -89,7 +89,7 @@ async function fetchData<T>(endpoint: string): Promise<T | null> {
       headers: { 
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 3600 }
+      next: { revalidate: 3600 } 
     });
     
     if (!res.ok) {
@@ -103,16 +103,21 @@ async function fetchData<T>(endpoint: string): Promise<T | null> {
   }
 }
 
-async function ensureChapterCount(item: DramaItem): Promise<DramaItem> {
-  if (item.platform === "netshort" && (!item.chapterCount || item.chapterCount === 0)) {
-    const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${item.bookId}`);
-    if (epRes) {
-      const epData = (epRes.data as Record<string, unknown>) || epRes;
-      item.chapterCount = Number(epData?.totalEpisode || epRes.totalEpisode || 0);
+/** * HELPER: Patching khusus Netshort agar chapterCount (EPS) muncul 
+ */
+const patchNetshortItems = async (items: Record<string, unknown>[]): Promise<DramaItem[]> => {
+  return Promise.all(items.map(async (b) => {
+    const mapped = mapDramaData(b, "netshort");
+    if (mapped.bookId && (mapped.chapterCount === 0 || !mapped.chapterCount)) {
+      const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${mapped.bookId}`);
+      if (epRes) {
+        const epData = (epRes.data as Record<string, unknown>) || epRes;
+        mapped.chapterCount = Number(epData?.totalEpisode || epRes.totalEpisode || 0);
+      }
     }
-  }
-  return item;
-}
+    return mapped;
+  }));
+};
 
 // --- CORE DATA FETCHERS ---
 export async function getAllDracinData(): Promise<DramaSection[]> {
@@ -146,20 +151,6 @@ export async function getAllDracinData(): Promise<DramaSection[]> {
       });
     }
     return safeExtractList(raw);
-  };
-
-  const patchNetshortItems = async (items: Record<string, unknown>[]) => {
-    return Promise.all(items.map(async (b) => {
-      const mapped = mapDramaData(b, "netshort");
-      if (mapped.bookId && mapped.chapterCount === 0) {
-        const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${mapped.bookId}`);
-        if (epRes) {
-          const epData = (epRes.data as Record<string, unknown>) || epRes;
-          mapped.chapterCount = Number(epData?.totalEpisode || epRes.totalEpisode || 0);
-        }
-      }
-      return mapped;
-    }));
   };
 
   const nsTrendingPatched = await patchNetshortItems(safeExtractList(nsTheaters));
@@ -243,7 +234,8 @@ export async function searchDramaReelshort(query: string): Promise<DramaItem[]> 
 
 export async function searchDramaNetshort(query: string): Promise<DramaItem[]> {
   const res = await fetchData<unknown>(`netshort/search?query=${encodeURIComponent(query)}`);
-  return safeExtractList(res).map(b => mapDramaData(b, "netshort"));
+  const list = safeExtractList(res);
+  return patchNetshortItems(list);
 }
 
 export async function searchDramaFlickreels(query: string): Promise<DramaItem[]> {
@@ -437,7 +429,7 @@ export async function getVideoStream(vid: string, platform: string = "melolo"): 
 }
 
 export async function getMassiveForyou(): Promise<DramaItem[]> {
-  const targets: { platform: PlatformType; prefix: string; total: number }[] = [
+  const targets = [
     { platform: "dramabox", prefix: "dramabox/foryou?page=", total: 50 },
     { platform: "reelshort", prefix: "reelshort/foryou?page=", total: 50 },
     { platform: "netshort", prefix: "netshort/foryou?page=", total: 50 },
@@ -445,12 +437,12 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
   ];
 
   const meloloOffsets = [0, 20, 40, 60, 80, 100];
-  const allItems: DramaItem[] = [];
-
-  const pageTasks = targets.flatMap(t =>
+  const allRawItems: { data: Record<string, unknown>, platform: PlatformType }[] = [];
+  
+  const pageTasks = targets.flatMap(t => 
     Array.from({ length: t.total }, (_, i) => ({
       url: `${t.prefix}${i + 1}`,
-      platform: t.platform
+      platform: t.platform as PlatformType
     }))
   );
 
@@ -465,49 +457,37 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
     allTasks.map(task => fetchData<unknown>(task.url))
   );
 
-  results.forEach((result, index) => {
+  const processedItems: DramaItem[] = [];
+
+  for (let index = 0; index < results.length; index++) {
+    const result = results[index];
     if (result.status === 'fulfilled' && result.value) {
       const task = allTasks[index];
-      const val = result.value;
-
+      
       if (task.platform === "melolo") {
-        const meloloData = val as MeloloResponse;
+        const meloloData = result.value as MeloloResponse;
         const books = meloloData?.data?.cell?.books || [];
         books.forEach((b: MeloloBook) => {
-          allItems.push(mapDramaData(b, "melolo"));
+          processedItems.push(mapDramaData(b, "melolo"));
         });
+      } else if (task.platform === "netshort") {
+        const extracted = safeExtractList(result.value);
+        // Patching Netshort secara async di sini
+        const patched = await patchNetshortItems(extracted);
+        processedItems.push(...patched);
       } else {
-        const extracted = safeExtractList(val);
+        const extracted = safeExtractList(result.value);
         extracted.forEach((b: Record<string, unknown>) => {
-          allItems.push(mapDramaData(b, task.platform));
+          processedItems.push(mapDramaData(b, task.platform));
         });
       }
     }
-  });
+  }
 
-  const uniqueItems = allItems
+  return processedItems
     .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
-    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i);
-
-  const patchedItems = await Promise.all(
-    uniqueItems.map(async (item) => {
-      if (item.platform === "netshort" && (!item.chapterCount || item.chapterCount === 0)) {
-        try {
-          const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${item.bookId}`);
-          if (epRes) {
-            const dataWrap = (epRes.data as Record<string, unknown>) || epRes;
-            const total = Number(dataWrap.totalEpisode || epRes.totalEpisode || 0);
-            return { ...item, chapterCount: total };
-          }
-        } catch {
-          return item;
-        }
-      }
-      return item;
-    })
-  );
-
-  return patchedItems.sort(() => Math.random() - 0.5);
+    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i)
+    .sort(() => Math.random() - 0.5);
 }
 
 export async function getMassiveDubIndo(totalPages: number = 100): Promise<DramaItem[]> {
