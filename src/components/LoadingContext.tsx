@@ -24,8 +24,8 @@ export const LoadingProvider = ({ children }: { children: React.ReactNode }) => 
            <Loading /> 
         </div>
       )}
-      
-      <div className={isLoading ? "opacity-0" : "opacity-100 transition-opacity duration-300"}>
+
+      <div className={isLoading ? "opacity-0 invisible h-0" : "opacity-100 transition-opacity duration-300"}>
         {children}
       </div>
     </LoadingContext.Provider>

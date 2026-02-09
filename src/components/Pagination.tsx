@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useLoading, type LoadingContextType } from "@/components/LoadingContext";
+import { useLoading } from "@/components/LoadingContext";
 
 interface PaginationProps {
   currentPage: number;
@@ -11,13 +11,15 @@ interface PaginationProps {
 
 export default function Pagination({ currentPage, totalPages, slug }: PaginationProps) {
   const router = useRouter();
-  const { setIsLoading } = useLoading() as LoadingContextType;
+  const { setIsLoading } = useLoading();
 
   const handleNav = (pageNum: number) => {
     if (pageNum === currentPage) return;
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     setIsLoading(true);
+
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    
     router.push(`/category/${slug}?page=${pageNum}`);
   };
 
