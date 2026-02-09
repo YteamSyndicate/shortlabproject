@@ -1,6 +1,5 @@
 "use client";
-import { createContext, useContext, useState, useEffect, useMemo } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { createContext, useContext, useState, useMemo } from "react";
 import Loading from "@/app/loading";
 
 export interface LoadingContextType {
@@ -12,17 +11,6 @@ const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
 export const LoadingProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (isLoading) {
-      const handle = requestAnimationFrame(() => {
-        setIsLoading(false);
-      });
-      return () => cancelAnimationFrame(handle);
-    }
-  }, [pathname, searchParams, isLoading]);
 
   const contextValue = useMemo(() => ({
     isLoading,

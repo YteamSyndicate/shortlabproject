@@ -1,11 +1,6 @@
 "use client";
-
 import { useEffect } from "react";
-import { useLoading } from "./LoadingContext";
-
-interface LoadingContextType {
-  setIsLoading: (v: boolean) => void;
-}
+import { useLoading, type LoadingContextType } from "./LoadingContext";
 
 export default function LoadingReset() {
   const { setIsLoading } = useLoading() as LoadingContextType;
