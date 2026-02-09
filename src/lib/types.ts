@@ -10,6 +10,7 @@ export interface DramaItem {
   tag?: string;
   playCount?: string;
   chapterCount?: number;
+  totalEpisode?: number;
   platform: PlatformType;
   genre?: string;
   allTags?: string[];
