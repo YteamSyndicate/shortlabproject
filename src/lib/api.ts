@@ -427,30 +427,38 @@ export async function getVideoStream(vid: string, platform: string = "melolo"): 
 }
 
 export async function getMassiveForyou(): Promise<DramaItem[]> {
-  const fetchTasks = [
-    ...Array.from({ length: 30 }, (_, i) => fetchData<unknown>(`dramabox/foryou?page=${i + 1}`)),
-    ...Array.from({ length: 30 }, (_, i) => fetchData<unknown>(`reelshort/foryou?page=${i + 1}`)),
-    ...Array.from({ length: 30 }, (_, i) => fetchData<unknown>(`netshort/foryou?page=${i + 1}`)),
-    ...[0, 20, 40, 60, 80].map(off => fetchData<unknown>(`melolo/foryou?offset=${off}`)),
-
-    fetchData<unknown>(`flickreels/foryou?page=1`),
-    fetchData<unknown>(`flickreels/foryou?page=2`),
+  const targets = [
+    { platform: "dramabox", prefix: "dramabox/foryou?page=", total: 50 },
+    { platform: "reelshort", prefix: "reelshort/foryou?page=", total: 50 },
+    { platform: "netshort", prefix: "netshort/foryou?page=", total: 50 },
+    { platform: "flickreels", prefix: "flickreels/foryou?page=", total: 2 },
   ];
 
-  const rawResults = await Promise.allSettled(fetchTasks);
+  const meloloOffsets = [0, 20, 40, 60, 80, 100];
   const allItems: DramaItem[] = [];
+  const pageTasks = targets.flatMap(t => 
+    Array.from({ length: t.total }, (_, i) => ({
+      url: `${t.prefix}${i + 1}`,
+      platform: t.platform as PlatformType
+    }))
+  );
 
-  rawResults.forEach((result, index) => {
+  const meloloTasks = meloloOffsets.map(off => ({
+    url: `melolo/foryou?offset=${off}`,
+    platform: "melolo" as PlatformType
+  }));
+
+  const allTasks = [...pageTasks, ...meloloTasks];
+
+  const results = await Promise.allSettled(
+    allTasks.map(task => fetchData<unknown>(task.url))
+  );
+
+  results.forEach((result, index) => {
     if (result.status === 'fulfilled' && result.value) {
-      let platform: PlatformType = "dramabox";
-
-      if (index < 30) platform = "dramabox";
-      else if (index < 60) platform = "reelshort";
-      else if (index < 90) platform = "netshort";
-      else if (index < 95) platform = "melolo";
-      else platform = "flickreels";
-
-      if (platform === "melolo") {
+      const task = allTasks[index];
+      
+      if (task.platform === "melolo") {
         const meloloData = result.value as MeloloResponse;
         const books = meloloData?.data?.cell?.books || [];
         books.forEach((b: MeloloBook) => {
@@ -459,7 +467,7 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
       } else {
         const extracted = safeExtractList(result.value);
         extracted.forEach((b: Record<string, unknown>) => {
-          allItems.push(mapDramaData(b, platform));
+          allItems.push(mapDramaData(b, task.platform));
         });
       }
     }
@@ -468,10 +476,10 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
   return allItems
     .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
     .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i)
-    .sort(() => Math.random() - 0.5); 
+    .sort(() => Math.random() - 0.5);
 }
 
-export async function getMassiveDubIndo(totalPages: number = 30): Promise<DramaItem[]> {
+export async function getMassiveDubIndo(totalPages: number = 100): Promise<DramaItem[]> {
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
   const classes = ['terpopuler', 'terbaru'];
   

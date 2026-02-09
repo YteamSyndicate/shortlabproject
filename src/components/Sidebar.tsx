@@ -1,18 +1,23 @@
 "use client";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import Loading from "@/app/loading";
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const currentYear = new Date().getFullYear();
+  const [showLoading, setShowLoading] = useState(false);
 
   const navMenus = [
     { name: 'Beranda', href: '/' },
     { name: 'Trending', href: '/category/trending-sekarang' },
+    { name: 'Rekomendasi', href: '/category/pilihan-untukmu' },
     { name: 'Terbaru', href: '/category/baru-rilis' },
     { name: 'Dub Indo', href: '/category/dubindo' },
   ];
 
+  if (showLoading) return <Loading />;
   return (
     <AnimatePresence>
       {isOpen && (
@@ -48,10 +53,12 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
                   <Link 
                     key={m.name} 
                     href={m.href} 
-                    onClick={onClose} 
+                    onClick={() => {
+                      setShowLoading(true);
+                      onClose();
+                    }}
                     className="text-sm font-black uppercase tracking-[0.3em] text-zinc-400 hover:text-red-600 transition-all hover:translate-x-2 flex items-center group"
                   >
-                    {/* Variasi: Tambahkan titik merah kecil saat hover agar lebih "Shortlab" */}
                     <span className="w-0 h-1 bg-red-600 mr-0 group-hover:w-3 group-hover:mr-3 transition-all duration-300 rounded-full" />
                     {m.name}
                   </Link>
@@ -62,7 +69,14 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
             <div className="flex flex-col gap-4">
               <div className="text-center">
                 <div className="w-full flex justify-center opacity-30 group">
-                  <Link href="/" onClick={onClose} className="inline-block">
+                  <Link 
+                    href="/" 
+                    onClick={() => {
+                      setShowLoading(true);
+                      onClose();
+                    }}
+                    className="inline-block"
+                  >
                     <Image 
                       src="/logo_SL.png" 
                       alt="SHORTLAB Logo" 
