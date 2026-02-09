@@ -3,29 +3,22 @@ import { useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import Image from "next/image";
-import Loading from "@/app/loading";
 
 export default function Navbar() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showLoading, setShowLoading] = useState(false);
   const navMenus = [
     { name: 'Beranda', href: '/' },
     { name: 'Trending', href: '/category/trending-sekarang' },
-    { name: 'Rekomendasi', href: '/category/pilihan-untukmu' },
+    { name: 'Trending', href: '/category/trending-sekarang' },
     { name: 'Terbaru', href: '/category/baru-rilis' },
     { name: 'Dub Indo', href: '/category/dubindo' },
   ];
 
-  if (showLoading) return <Loading />;
   return (
     <>
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <nav className="fixed top-0 w-full z-100 px-6 md:px-12 lg:px-20 py-4 md:py-6 flex items-center justify-between bg-black/20 backdrop-blur-xl border-b border-white/5 transition-all duration-300 hover:bg-black/60 font-sans">
-        <Link 
-          href="/" 
-          className="flex items-center gap-3 group"
-          onClick={() => setShowLoading(true)}
-        >
+        <Link href="/" className="flex items-center gap-3 group">
           <Image 
             src="/logo_SL.png" 
             alt="SHORTLAB Logo" 
@@ -41,7 +34,6 @@ export default function Navbar() {
             <Link 
               key={m.name} 
               href={m.href} 
-              onClick={() => setShowLoading(true)}
               className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400 hover:text-red-600 transition-all hover:scale-105"
             >
               {m.name}

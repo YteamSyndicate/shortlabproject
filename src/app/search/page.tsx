@@ -126,7 +126,6 @@ export default async function SearchPage({
                       variant="card"
                     >
                       <div className="group cursor-pointer">
-                        {/* Container Cover identik Homepage */}
                         <div className="relative aspect-3/4 overflow-hidden bg-zinc-900 rounded-2xl border border-white/5 transition-all duration-500 shadow-2xl group-hover:border-red-600/50">
                           <Image 
                             src={imageUrl} 
@@ -136,8 +135,7 @@ export default async function SearchPage({
                             unoptimized 
                             referrerPolicy="no-referrer"
                           />
-                          
-                          {/* Badge Platform (Top Left) */}
+
                           <div className="absolute top-3 left-3 z-30 bg-red-600 text-white text-[8px] md:text-[10px] font-black px-2 py-1 rounded-md uppercase">
                             {item.platform || 'HOT'}
                           </div>
@@ -147,7 +145,7 @@ export default async function SearchPage({
                              <span className="text-[9px] md:text-[11px] font-black text-yellow-400">★ {finalScore}</span>
                           </div>
 
-                          {/* Gradient and Info Overlay */}
+                          {/* Gradient and Info */}
                           <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-linear-to-t from-black via-black/80 to-transparent flex flex-col justify-end p-4 md:p-5">
                              {item.genre && (
                                <div className="mb-1.5">

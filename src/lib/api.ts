@@ -103,7 +103,8 @@ async function fetchData<T>(endpoint: string): Promise<T | null> {
   }
 }
 
-/** * HELPER: Patching khusus Netshort agar chapterCount (EPS) muncul 
+/**
+ * HELPER
  */
 const patchNetshortItems = async (items: Record<string, unknown>[]): Promise<DramaItem[]> => {
   return Promise.all(items.map(async (b) => {
@@ -234,8 +235,7 @@ export async function searchDramaReelshort(query: string): Promise<DramaItem[]> 
 
 export async function searchDramaNetshort(query: string): Promise<DramaItem[]> {
   const res = await fetchData<unknown>(`netshort/search?query=${encodeURIComponent(query)}`);
-  const list = safeExtractList(res);
-  return patchNetshortItems(list);
+  return patchNetshortItems(safeExtractList(res));
 }
 
 export async function searchDramaFlickreels(query: string): Promise<DramaItem[]> {
@@ -437,57 +437,40 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
   ];
 
   const meloloOffsets = [0, 20, 40, 60, 80, 100];
-  const allRawItems: { data: Record<string, unknown>, platform: PlatformType }[] = [];
-  
-  const pageTasks = targets.flatMap(t => 
-    Array.from({ length: t.total }, (_, i) => ({
-      url: `${t.prefix}${i + 1}`,
-      platform: t.platform as PlatformType
-    }))
-  );
+  const allTasks = [
+    ...targets.flatMap(t => Array.from({ length: t.total }, (_, i) => ({ url: `${t.prefix}${i + 1}`, platform: t.platform as PlatformType }))),
+    ...meloloOffsets.map(off => ({ url: `melolo/foryou?offset=${off}`, platform: "melolo" as PlatformType }))
+  ];
 
-  const meloloTasks = meloloOffsets.map(off => ({
-    url: `melolo/foryou?offset=${off}`,
-    platform: "melolo" as PlatformType
-  }));
+  const results = await Promise.allSettled(allTasks.map(task => fetchData<unknown>(task.url)));
+  const initialItems: DramaItem[] = [];
 
-  const allTasks = [...pageTasks, ...meloloTasks];
-
-  const results = await Promise.allSettled(
-    allTasks.map(task => fetchData<unknown>(task.url))
-  );
-
-  const processedItems: DramaItem[] = [];
-
-  for (let index = 0; index < results.length; index++) {
-    const result = results[index];
+  results.forEach((result, index) => {
     if (result.status === 'fulfilled' && result.value) {
       const task = allTasks[index];
-      
       if (task.platform === "melolo") {
-        const meloloData = result.value as MeloloResponse;
-        const books = meloloData?.data?.cell?.books || [];
-        books.forEach((b: MeloloBook) => {
-          processedItems.push(mapDramaData(b, "melolo"));
-        });
-      } else if (task.platform === "netshort") {
-        const extracted = safeExtractList(result.value);
-        // Patching Netshort secara async di sini
-        const patched = await patchNetshortItems(extracted);
-        processedItems.push(...patched);
+        const books = (result.value as MeloloResponse)?.data?.cell?.books || [];
+        books.forEach((b: MeloloBook) => initialItems.push(mapDramaData(b, "melolo")));
       } else {
-        const extracted = safeExtractList(result.value);
-        extracted.forEach((b: Record<string, unknown>) => {
-          processedItems.push(mapDramaData(b, task.platform));
-        });
+        safeExtractList(result.value).forEach(b => initialItems.push(mapDramaData(b, task.platform)));
       }
     }
-  }
+  });
 
-  return processedItems
+  const uniqueItems = initialItems
     .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
-    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i)
-    .sort(() => Math.random() - 0.5);
+    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i);
+
+  return Promise.all(uniqueItems.map(async (item) => {
+    if (item.platform === "netshort" && (!item.chapterCount || item.chapterCount === 0)) {
+       const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${item.bookId}`);
+       if (epRes) {
+         const epData = (epRes.data as Record<string, unknown>) || epRes;
+         item.chapterCount = Number(epData?.totalEpisode || epRes.totalEpisode || 0);
+       }
+    }
+    return item;
+  })).then(items => items.sort(() => Math.random() - 0.5));
 }
 
 export async function getMassiveDubIndo(totalPages: number = 100): Promise<DramaItem[]> {
@@ -500,14 +483,9 @@ export async function getMassiveDubIndo(totalPages: number = 100): Promise<Drama
     );
 
     const results = await Promise.all(fetchTasks);
+    const allItems = results.flatMap(res => safeExtractList(res).map(b => mapDramaData(b, "dramabox")));
 
-    const allItems = results.flatMap(res => 
-      safeExtractList(res).map(b => mapDramaData(b, "dramabox"))
-    );
-
-    return allItems.filter((v, i, a) => 
-      v.bookId && a.findIndex(t => t.bookId === v.bookId) === i
-    );
+    return allItems.filter((v, i, a) => v.bookId && a.findIndex(t => t.bookId === v.bookId) === i);
   } catch (error) {
     console.error("Error fetching massive Dub Indo:", error);
     return [];

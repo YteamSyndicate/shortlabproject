@@ -18,8 +18,6 @@ export function mapDramaData(rawItem: Record<string, unknown>, platformOverride?
   const isFR = !!(item.playlet_id || item.playlet_name);
   const isNS = !!(item.short_play_id || item.shortPlayId);
   const isRS = !!(item.book_title || item.totalEpisodes || (item.bookId && !isML && !isNS && !isFR));
-  
-  // PENTING: isDB digunakan di detectedPlatform agar ESLint tidak error unused-vars
   const isDB = !!(item.chapterId || item.chapterName || item.cdnList || item.bookName);
 
   const detectedPlatform: PlatformType = platformOverride || 
@@ -74,8 +72,7 @@ export function mapDramaData(rawItem: Record<string, unknown>, platformOverride?
 
 export function extractVideoUrl(cdnList: RawEpisodeData['cdnList']): string {
   if (!cdnList || !Array.isArray(cdnList) || cdnList.length === 0) return "";
-  
-  // Casting ke Record<string, unknown> untuk menghindari error 'any'
+
   const defaultCdn = (cdnList.find((c) => (c as Record<string, unknown>).isDefault === 1) || cdnList[0]) as Record<string, unknown>;
 
   if (defaultCdn.videoPathList && Array.isArray(defaultCdn.videoPathList) && defaultCdn.videoPathList.length > 0) {
