@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ExpandableText from "@/components/ExpandableText";
 import AnimationWrapper from "@/components/AnimationWrapper";
+import Pagination from "@/components/Pagination";
 import { 
   getTrendingDrama, 
   getLatestDrama, 
@@ -242,70 +243,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             </AnimationWrapper>
 
             {totalPages > 1 && (
-              <div className="mt-24 flex flex-col items-center gap-8">
-                <div className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.4em]">
-                  Page <span className="text-red-600">{currentPage}</span> / {totalPages}
-                </div>
-
-                <div className="flex items-center justify-center gap-2 md:gap-4">
-                  {currentPage > 1 ? (
-                    <Link
-                      href={`/category/${slug}?page=${currentPage - 1}`}
-                      className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:border-red-600 transition-all shadow-xl"
-                    >
-                      ← <span className="hidden md:inline ml-2 tracking-widest">Prev</span>
-                    </Link>
-                  ) : (
-                    <div className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900/50 border border-white/5 text-zinc-800 cursor-not-allowed">
-                      ← <span className="hidden md:inline ml-2 tracking-widest">Prev</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    {(() => {
-                      const pages = [];
-                      const showMax = 5;
-                      let startPage = Math.max(1, currentPage - 2);
-                      let endPage = startPage + showMax - 1;
-
-                      if (endPage > totalPages) {
-                        endPage = totalPages;
-                        startPage = Math.max(1, endPage - showMax + 1);
-                      }
-
-                      for (let i = startPage; i <= endPage; i++) {
-                        pages.push(
-                          <Link
-                            key={`page-num-${i}`}
-                            href={`/category/${slug}?page=${i}`}
-                            className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-xl font-black text-xs transition-all duration-500 border ${
-                              currentPage === i
-                                ? "bg-red-600 border-red-600 text-white shadow-[0_0_30px_rgba(220,38,38,0.6)] scale-110 z-10"
-                                : "bg-zinc-900 border-white/5 text-zinc-500 hover:border-red-600/50 hover:text-white"
-                            }`}
-                          >
-                            {i}
-                          </Link>
-                        );
-                      }
-                      return pages;
-                    })()}
-                  </div>
-
-                  {currentPage < totalPages ? (
-                    <Link
-                      href={`/category/${slug}?page=${currentPage + 1}`}
-                      className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white hover:border-red-600 transition-all shadow-xl"
-                    >
-                      <span className="hidden md:inline mr-2 tracking-widest">Next</span> →
-                    </Link>
-                  ) : (
-                    <div className="flex h-10 md:h-12 px-4 md:px-6 items-center justify-center rounded-xl font-black text-[10px] uppercase bg-zinc-900/50 border border-white/5 text-zinc-800 cursor-not-allowed">
-                      <span className="hidden md:inline mr-2 tracking-widest">Next</span> →
-                    </div>
-                  )}
-                </div>
-              </div>
+              <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                slug={slug} 
+              />
             )}
           </>
         ) : (

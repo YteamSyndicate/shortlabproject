@@ -2,17 +2,28 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useLoading } from "@/components/LoadingContext";
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const currentYear = new Date().getFullYear();
+  const { setIsLoading } = useLoading();
+  const router = useRouter();
 
   const navMenus = [
     { name: 'Beranda', href: '/' },
-    { name: 'Trending', href: '/category/trending-sekarang' },
     { name: 'Rekomendasi', href: '/category/pilihan-untukmu' },
+    { name: 'Trending', href: '/category/trending-sekarang' },
     { name: 'Terbaru', href: '/category/baru-rilis' },
     { name: 'Dub Indo', href: '/category/dubindo' },
   ];
+
+  const handleNavigation = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    onClose();
+    setIsLoading(true);
+    router.push(href);
+  };
 
   return (
     <AnimatePresence>
@@ -49,7 +60,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
                   <Link 
                     key={m.name} 
                     href={m.href} 
-                    onClick={onClose} 
+                    onClick={(e) => handleNavigation(e, m.href)}
                     className="text-sm font-black uppercase tracking-[0.3em] text-zinc-400 hover:text-red-600 transition-all hover:translate-x-2 flex items-center group"
                   >
                     <span className="w-0 h-1 bg-red-600 mr-0 group-hover:w-3 group-hover:mr-3 transition-all duration-300 rounded-full" />
@@ -62,7 +73,11 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
             <div className="flex flex-col gap-4">
               <div className="text-center">
                 <div className="w-full flex justify-center opacity-30 group">
-                  <Link href="/" onClick={onClose} className="inline-block">
+                  <Link 
+                    href="/" 
+                    onClick={(e) => handleNavigation(e, "/")}
+                    className="inline-block"
+                  >
                     <Image 
                       src="/logo_SL.png" 
                       alt="SHORTLAB Logo" 

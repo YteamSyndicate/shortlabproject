@@ -104,7 +104,7 @@ async function fetchData<T>(endpoint: string): Promise<T | null> {
 }
 
 /**
- * HELPER
+ * HELPER: Patching khusus Netshort agar EPS muncul
  */
 const patchNetshortItems = async (items: Record<string, unknown>[]): Promise<DramaItem[]> => {
   return Promise.all(items.map(async (b) => {
@@ -121,6 +121,7 @@ const patchNetshortItems = async (items: Record<string, unknown>[]): Promise<Dra
 };
 
 // --- CORE DATA FETCHERS ---
+
 export async function getAllDracinData(): Promise<DramaSection[]> {
   const [
     dbTrending, dbLatest, dbForyou,
@@ -401,47 +402,64 @@ export async function getVideoStream(vid: string, platform: string = "melolo"): 
 }
 
 export async function getMassiveForyou(page: number = 1): Promise<DramaItem[]> {
-  const meloloOffset = (page - 1) * 20;
+  const tasks: { url: string; platform: PlatformType }[] = [];
 
-  const tasks = [
-    { url: `dramabox/foryou?page=${page}`, platform: "dramabox" as PlatformType },
-    { url: `reelshort/foryou?page=${page}`, platform: "reelshort" as PlatformType },
-    { url: `netshort/foryou?page=${page}`, platform: "netshort" as PlatformType },
-    { url: `flickreels/foryou?page=${page}`, platform: "flickreels" as PlatformType },
-    { url: `melolo/foryou?offset=${meloloOffset}`, platform: "melolo" as PlatformType },
-  ];
-
-  const results = await Promise.allSettled(tasks.map(t => fetchData<unknown>(t.url)));
-  const allItems: DramaItem[] = [];
-
-  for (let i = 0; i < results.length; i++) {
-    const res = results[i];
-    const task = tasks[i];
-    if (res.status === 'fulfilled' && res.value) {
-      if (task.platform === "melolo") {
-        const books = (res.value as MeloloResponse)?.data?.cell?.books || [];
-        books.forEach((b: MeloloBook) => allItems.push(mapDramaData(b, "melolo")));
-      } else {
-        const extracted = safeExtractList(res.value);
-        extracted.forEach(b => allItems.push(mapDramaData(b, task.platform)));
-      }
-    }
+  if (page <= 50) {
+    tasks.push({ url: `dramabox/foryou?page=${page}`, platform: "dramabox" });
+    tasks.push({ url: `reelshort/foryou?page=${page}`, platform: "reelshort" });
+    tasks.push({ url: `netshort/foryou?page=${page}`, platform: "netshort" });
   }
 
-  const uniqueItems = allItems
-    .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
-    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i);
+  if (page <= 2) {
+    tasks.push({ url: `flickreels/foryou?page=${page}`, platform: "flickreels" });
+  }
 
-  return Promise.all(uniqueItems.map(async (item) => {
-    if (item.platform === "netshort" && (!item.chapterCount || item.chapterCount === 0)) {
-       const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${item.bookId}`);
-       if (epRes) {
-         const epData = (epRes.data as Record<string, unknown>) || epRes;
-         item.chapterCount = Number(epData?.totalEpisode || epRes.totalEpisode || 0);
-       }
-    }
-    return item;
-  })).then(items => items.sort(() => Math.random() - 0.5));
+  const meloloOffset = page * 20; 
+  if (meloloOffset <= 100) {
+    tasks.push({ url: `melolo/foryou?offset=${meloloOffset}`, platform: "melolo" });
+  }
+
+  if (tasks.length === 0) return [];
+
+  try {
+    const results = await Promise.allSettled(tasks.map(t => fetchData<unknown>(t.url)));
+    const allItems: DramaItem[] = [];
+
+    results.forEach((res, i) => {
+      const task = tasks[i];
+      if (res.status === 'fulfilled' && res.value) {
+        if (task.platform === "melolo") {
+          const meloloRes = res.value as MeloloResponse;
+          const books = meloloRes?.data?.cell?.books || [];
+          books.forEach((b: MeloloBook) => allItems.push(mapDramaData(b, "melolo")));
+        } else {
+          const extracted = safeExtractList(res.value);
+          extracted.forEach(b => allItems.push(mapDramaData(b, task.platform)));
+        }
+      }
+    });
+
+    const uniqueItems = allItems
+      .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
+      .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i);
+
+    return Promise.all(uniqueItems.map(async (item) => {
+      if (item.platform === "netshort" && (!item.chapterCount || item.chapterCount === 0)) {
+         const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${item.bookId}`);
+         if (epRes) {
+           const epData = (epRes.data as Record<string, unknown>) || epRes;
+           item.chapterCount = Number(epData?.totalEpisode || epRes.totalEpisode || 0);
+         }
+      }
+      return item;
+    })).then(items => {
+      return items.sort(() => Math.random() - 0.5);
+    });
+
+  } catch (error) {
+    console.error("[MASSIVE-FORYOU-ERROR]:", error);
+    return [];
+  }
 }
 
 export async function getMassiveDubIndo(page: number = 1): Promise<DramaItem[]> {
