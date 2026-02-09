@@ -1,7 +1,7 @@
 "use client";
-
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import Loading from "@/app/loading";
 
 export interface LoadingContextType {
   isLoading: boolean;
@@ -10,30 +10,42 @@ export interface LoadingContextType {
 
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
-export function LoadingProvider({ children }: { children: React.ReactNode }) {
+export const LoadingProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const handle = requestAnimationFrame(() => {
-      setIsLoading(false);
-    });
-    
-    return () => cancelAnimationFrame(handle);
-  }, [pathname, searchParams]);
+    if (isLoading) {
+      const handle = requestAnimationFrame(() => {
+        setIsLoading(false);
+      });
+      return () => cancelAnimationFrame(handle);
+    }
+  }, [pathname, searchParams, isLoading]);
+
+  const contextValue = useMemo(() => ({
+    isLoading,
+    setIsLoading: (v: boolean) => setIsLoading(v)
+  }), [isLoading]);
 
   return (
-    <LoadingContext.Provider value={{ isLoading, setIsLoading }}>
-      {children}
+    <LoadingContext.Provider value={contextValue}>
+      {isLoading && (
+        <div className="fixed inset-0 z-9999 bg-black">
+           <Loading /> 
+        </div>
+      )}
+      
+      <div className={isLoading ? "opacity-0" : "opacity-100 transition-opacity duration-300"}>
+        {children}
+      </div>
     </LoadingContext.Provider>
   );
-}
+};
 
-export function useLoading() {
+export const useLoading = () => {
   const context = useContext(LoadingContext);
-  if (!context) {
-    throw new Error("useLoading must be used within a LoadingProvider");
-  }
+  if (!context) throw new Error("useLoading must be used within a LoadingProvider");
   return context;
-}
+};

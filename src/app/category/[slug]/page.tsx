@@ -42,17 +42,25 @@ function shuffleItems(array: DramaItem[]) {
 
 const getImageUrl = (item: ImageData) => {
   let rawUrl = item.cover || item.thumb_url || item.shortPlayCover || item.groupShortPlayCover;
-  if (!rawUrl || rawUrl === "undefined" || rawUrl === "" || rawUrl === "null") return PLACEHOLDER_IMAGE;
+  
+  if (!rawUrl || rawUrl === "undefined" || rawUrl === "" || rawUrl === "null") {
+    return PLACEHOLDER_IMAGE;
+  }
+  
   rawUrl = rawUrl.trim();
+
   if (item.platform === 'melolo' && !rawUrl.includes('weserv.nl')) {
     return `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&noreferer=1&output=webp`;
   }
+
   if (rawUrl.includes('fizzopic.org') || rawUrl.includes('ibyteimg.com')) {
     return `https://wsrv.nl/?url=${encodeURIComponent(rawUrl.replace('.heic', '.webp'))}&noreferer=1&n=-1`;
   }
+
   if ((rawUrl.match(/https?:\/\//g) || []).length > 1) {
     rawUrl = rawUrl.substring(rawUrl.lastIndexOf('http'));
   }
+
   return `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&noreferer=1&output=webp&default=${encodeURIComponent(PLACEHOLDER_IMAGE)}`;
 };
 
@@ -76,7 +84,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     allItems = await getMassiveForyou(currentPage).catch(() => []);
   } 
   else {
-    const [trendingDb, trendingMl, latestDb, latestMl, dubIndo, allDracinRaw] = await Promise.all([
+    const [
+      trendingDb, trendingMl, 
+      latestDb, latestMl, 
+      dubIndo,
+      allDracinRaw
+    ] = await Promise.all([
       getTrendingDrama().catch(() => []),
       getMeloloTrending().catch(() => []),
       getLatestDrama().catch(() => []),
@@ -114,7 +127,9 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   const uniqueMap = new Map<string, DramaItem>();
   allItems.forEach(item => {
     const key = `${item.platform}-${item.bookId}`.toLowerCase();
-    if (!uniqueMap.has(key) && item.title) uniqueMap.set(key, item);
+    if (!uniqueMap.has(key) && item.title) {
+      uniqueMap.set(key, item);
+    }
   });
   
   const finalItemsPool = Array.from(uniqueMap.values());
@@ -144,9 +159,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   return (
     <main className="relative min-h-screen bg-black text-white selection:bg-red-600 overflow-x-hidden font-sans">
       <LoadingReset />
-
-      <Navbar />
-      
+      <Navbar />    
       <div className="relative z-10 pt-32 md:pt-44 pb-32 px-6 md:px-12 lg:px-20">
         <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-10 overflow-x-auto whitespace-nowrap no-scrollbar">
           <Link href="/" className="hover:text-red-600 transition-colors">Beranda</Link>
@@ -174,31 +187,57 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
                   const imageUrl = getImageUrl(item);
                   const displayGenre = item.genre || (item.labelArray && item.labelArray[0]);
                   const finalIntro = item.intro && item.intro !== "undefined" && item.intro !== "null" && item.intro !== ""
-                    ? item.intro : "Nikmati alur cerita drama pendek terbaik dengan kualitas visual memukau...";
+                    ? item.intro 
+                    : "Nikmati alur cerita drama pendek terbaik dengan kualitas visual memukau. Saksikan kisah penuh emosi, romansa, dan dendam yang dikemas secara ringkas namun mendalam.";
 
                   return (
                     <div key={`${item.platform}-${item.bookId}-${iIdx}`} className="w-full">
-                      <ExpandableText {...item} cover={imageUrl} platform={item.platform} tag={displayGenre || "Drama"} text={finalIntro} score={finalScore} variant="card">
+                      <ExpandableText 
+                        {...item} 
+                        cover={imageUrl} 
+                        platform={item.platform} 
+                        tag={displayGenre || "Drama"} 
+                        text={finalIntro} 
+                        score={finalScore} 
+                        variant="card"
+                      >
                         <div className="group cursor-pointer">
                           <div className="relative aspect-3/4 overflow-hidden bg-zinc-900 rounded-2xl border border-white/5 transition-all duration-500 shadow-2xl group-hover:border-red-600/50">
-                            <Image src={imageUrl} alt={item.title || "Cover"} fill className="object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110" unoptimized referrerPolicy="no-referrer" />
-                            <div className="absolute top-3 left-3 z-30 bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase">{item.platform || 'HOT'}</div>
+                            <Image 
+                              src={imageUrl} 
+                              alt={item.title || "Cover"} 
+                              fill 
+                              className="object-cover opacity-80 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110" 
+                              unoptimized 
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute top-3 left-3 z-30 bg-red-600 text-white text-[9px] md:text-[9px] font-black px-2 py-1 rounded-md uppercase">
+                              {item.platform || 'HOT'}
+                            </div>
                             <div className="absolute top-3 right-3 z-30 bg-black/60 backdrop-blur-md border border-white/10 text-white px-2 py-1 rounded-md flex items-center gap-1">
                                <span className="text-[9px] md:text-[11px] font-black text-yellow-400">★ {finalScore}</span>
                             </div>
                             <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-linear-to-t from-black via-black/80 to-transparent flex flex-col justify-end p-4 md:p-5">
                                {displayGenre && (
                                  <div className="mb-1.5">
-                                   <span className={`${getGenreBg(displayGenre)} text-white text-[8px] md:text-[9px] font-black uppercase px-2 py-0.5 rounded-sm tracking-widest inline-block shadow-lg`}>{displayGenre}</span>
+                                   <span className={`${getGenreBg(displayGenre)} text-white text-[8px] md:text-[9px] font-black uppercase px-2 py-0.5 rounded-sm tracking-widest inline-block shadow-lg`}>
+                                     {displayGenre}
+                                   </span>
                                  </div>
                                )}
                                <div className="flex items-center gap-2 text-zinc-100 text-[10px] md:text-xs font-black uppercase tracking-widest">
-                                 <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
-                                 {item.chapterCount || item.totalEpisode || "Full"} Eps
-                               </div>
+                                  <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]" />
+                                  {item.chapterCount && item.chapterCount > 0 
+                                    ? `${item.chapterCount} Eps` 
+                                    : item.totalEpisode && item.totalEpisode > 0
+                                      ? `${item.totalEpisode} Eps` 
+                                      : "Full Eps"}
+                                </div>
                             </div>
                           </div>
-                          <h4 className="mt-4 font-black text-xs md:text-lg text-zinc-100 group-hover:text-red-500 transition-colors line-clamp-1 uppercase tracking-tight">{item.title}</h4>
+                          <h4 className="mt-4 font-black text-xs md:text-lg text-zinc-100 group-hover:text-red-500 transition-colors line-clamp-1 uppercase tracking-tight">
+                            {item.title}
+                          </h4>
                         </div>
                       </ExpandableText>
                     </div>
@@ -209,7 +248,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
 
             {totalPages > 1 && (
               <div className="mt-20">
-                <Pagination currentPage={currentPage} totalPages={totalPages} slug={slug} />
+                <Pagination 
+                  currentPage={currentPage} 
+                  totalPages={totalPages} 
+                  slug={slug} 
+                />
               </div>
             )}
           </>
@@ -220,6 +263,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           </div>
         )}
       </div>
+
       <Footer />
     </main>
   );
