@@ -139,7 +139,7 @@ export default function ExpandableText({
   const modalLayout = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 pointer-events-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 pt-16 pointer-events-none">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -156,7 +156,7 @@ export default function ExpandableText({
           >
             <button 
               onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 z-100 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/10 hover:bg-red-600 transition-all shadow-lg"
+              className="absolute top-4 right-4 z-100 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center hover:bg-red-600 transition-all shadow-lg"
             >
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path d="M6 18L18 6M6 6l12 12"/>
