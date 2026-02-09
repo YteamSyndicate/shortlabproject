@@ -411,28 +411,22 @@ export async function getVideoStream(vid: string, platform: string = "melolo"): 
   return data as unknown as StreamPayload;
 }
 
-export async function getMassiveForyou(): Promise<DramaItem[]> {
+export async function getMassiveForyou(page: number = 1): Promise<DramaItem[]> {
   const targets = [
-    { platform: "dramabox", prefix: "dramabox/foryou?page=", total: 50 },
-    { platform: "reelshort", prefix: "reelshort/foryou?page=", total: 50 },
-    { platform: "netshort", prefix: "netshort/foryou?page=", total: 50 },
-    { platform: "flickreels", prefix: "flickreels/foryou?page=", total: 2 },
+    { platform: "dramabox", url: `dramabox/foryou?page=${page}` },
+    { platform: "reelshort", url: `reelshort/foryou?page=${page}` },
+    { platform: "netshort", url: `netshort/foryou?page=${page}` },
+    { platform: "flickreels", url: `flickreels/foryou?page=${page > 2 ? 1 : page}` }, 
   ];
 
-  const meloloOffsets = [0, 20, 40, 60, 80, 100];
-  const pageTasks = targets.flatMap(t =>
-    Array.from({ length: t.total }, (_, i) => ({
-      url: `${t.prefix}${i + 1}`,
-      platform: t.platform as PlatformType
-    }))
-  );
+  const meloloOffset = (page - 1) * 20;
+  const meloloUrl = `melolo/foryou?offset=${meloloOffset}`;
 
-  const meloloTasks = meloloOffsets.map(off => ({
-    url: `melolo/foryou?offset=${off}`,
-    platform: "melolo" as PlatformType
-  }));
+  const allTasks = [
+    ...targets.map(t => ({ url: t.url, platform: t.platform as PlatformType })),
+    { url: meloloUrl, platform: "melolo" as PlatformType }
+  ];
 
-  const allTasks = [...pageTasks, ...meloloTasks];
   const results = await Promise.allSettled(
     allTasks.map(task => fetchData<unknown>(task.url))
   );
@@ -453,7 +447,8 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
       } else {
         const extracted = safeExtractList(result.value);
         const items = await Promise.all(extracted.map(async (b) => {
-          const mapped = mapDramaData(b, task.platform);
+          const mapped = mapDramaData(b, task.platform as PlatformType);
+
           if (task.platform === "netshort" && mapped.bookId && (!mapped.chapterCount || mapped.chapterCount === 0)) {
             const epRes = await fetchData<Record<string, unknown>>(`netshort/allepisode?shortPlayId=${mapped.bookId}`);
             if (epRes) {
@@ -472,8 +467,7 @@ export async function getMassiveForyou(): Promise<DramaItem[]> {
 
   return processedItems
     .filter(item => item && item.bookId && String(item.bookId) !== "undefined")
-    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i)
-    .sort(() => Math.random() - 0.5);
+    .filter((v, i, a) => a.findIndex(t => t.bookId === v.bookId) === i);
 }
 
 export async function getMassiveDubIndo(totalPages: number = 100): Promise<DramaItem[]> {

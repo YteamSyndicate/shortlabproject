@@ -75,10 +75,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
   
   let displayTitle = "KATEGORI";
   let allItems: DramaItem[] = [];
+  let isMassiveCategory = false;
 
   if (slug === "pilihan-untukmu" || slug === "foryou" || slug === "rekomendasi") {
     displayTitle = "Pilihan Untukmu";
-    allItems = await getMassiveForyou().catch(() => []);
+    isMassiveCategory = true;
+    allItems = await getMassiveForyou(currentPage).catch(() => []);
   } 
   else {
     const [
@@ -107,7 +109,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     } 
     else if (slug === "dubbing-indonesia") {
       displayTitle = "Dubbing Indonesia";
-      allItems = await getMassiveDubIndo(20).catch(() => []);
+      isMassiveCategory = true;
+      allItems = await getMassiveDubIndo(currentPage).catch(() => []);
     }
     else {
       displayTitle = slug.replace(/-/g, ' ').toUpperCase();
@@ -128,13 +131,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     }
   });
   
-  const shuffledItems = shuffleItems(Array.from(uniqueMap.values()));
-  const totalItems = shuffledItems.length;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const paginatedItems = shuffledItems.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const finalItemsPool = Array.from(uniqueMap.values());
+  const totalPages = isMassiveCategory ? 50 : Math.ceil(finalItemsPool.length / ITEMS_PER_PAGE); 
+  const paginatedItems = isMassiveCategory 
+    ? finalItemsPool
+    : shuffleItems(finalItemsPool).slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const getGenreBg = (genre: string) => {
     const g = (genre || "").toUpperCase();
@@ -170,19 +171,19 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           <h1 className="text-3xl md:text-6xl font-black uppercase tracking-tighter leading-none">
             {displayTitle}
           </h1>
-          <span className="text-zinc-800 text-xs md:text-lg font-black ml-auto">{totalItems} TITLES</span>
+          <span className="text-zinc-800 text-xs md:text-lg font-black ml-auto">
+            {isMassiveCategory ? "1500+" : finalItemsPool.length} TITLES
+          </span>
         </div>
 
         {paginatedItems.length > 0 ? (
           <>
-            <AnimationWrapper key={currentPage}>
+            <AnimationWrapper key={`${slug}-${currentPage}`}>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
                 {paginatedItems.map((baseItem, iIdx) => {
                   const item = baseItem as NetshortExtended;
-                  
                   const finalScore = sanitizeRating(item.score, iIdx);
                   const imageUrl = getImageUrl(item);
-                  
                   const displayGenre = item.genre || (item.labelArray && item.labelArray[0]);
                   const finalIntro = item.intro && item.intro !== "undefined" && item.intro !== "null" && item.intro !== ""
                     ? item.intro 
@@ -245,17 +246,19 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             </AnimationWrapper>
 
             {totalPages > 1 && (
-              <Pagination 
-                currentPage={currentPage} 
-                totalPages={totalPages} 
-                slug={slug} 
-              />
+              <div className="mt-20">
+                <Pagination 
+                  currentPage={currentPage} 
+                  totalPages={totalPages} 
+                  slug={slug} 
+                />
+              </div>
             )}
           </>
         ) : (
           <div className="h-[60vh] flex flex-col items-center justify-center text-zinc-600 uppercase font-black tracking-[0.3em] px-6 text-center">
             <div className="w-12 h-0.5 bg-red-600 mb-6 animate-pulse" />
-            <p className="max-w-xs leading-relaxed text-[10px]">Syncing Data...</p>
+            <p className="max-w-xs leading-relaxed text-[10px]">Syncing Data dari {slug}...</p>
           </div>
         )}
       </div>

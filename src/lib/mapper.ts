@@ -12,7 +12,6 @@ export const getAutoGenre = (title: string, intro: string): string => {
 
 export function mapDramaData(rawItem: Record<string, unknown>, platformOverride?: PlatformType): DramaItem {
   if (!rawItem) return {} as DramaItem;
-
   const item = (rawItem.drama ? rawItem.drama : rawItem) as Record<string, unknown>;
 
   const isML = !!(item.book_id || item.series_id);
@@ -26,6 +25,7 @@ export function mapDramaData(rawItem: Record<string, unknown>, platformOverride?
 
   const rawTitle = (item.book_title || item.title || item.bookName || item.shortPlayName || item.short_play_name || item.playlet_name || item.series_title || item.book_name || item.name || "Untitled");
   const title = String(rawTitle).replace(/<\/?[^>]+(>|$)/g, "").trim();
+
   const intro = String(item.special_desc || item.description || item.introduction || item.introduce || item.shotIntroduce || item.abstract || item.desc || "Sinopsis tidak tersedia.").trim();
 
   let allTags: string[] = [];
@@ -54,17 +54,6 @@ export function mapDramaData(rawItem: Record<string, unknown>, platformOverride?
     rawCover = `${base}${rawCover.startsWith('/') ? rawCover : `/${rawCover}`}`;
   }
 
-  const finalCount = Number(
-    item.totalEpisode ||
-    item.totalEpisodes || 
-    item.chapterCount ||
-    item.chapter_count || 
-    item.serial_count || 
-    item.episode_count || 
-    item.upload_num || 
-    0
-  );
-
   return {
     bookId: String(item.book_id || item.playlet_id || item.short_play_id || item.shortPlayId || item.series_id || item.bookId || item.chapterId || item.id || ""),
     title: title.toUpperCase(),
@@ -74,8 +63,7 @@ export function mapDramaData(rawItem: Record<string, unknown>, platformOverride?
     score: String(item.score || item.heatScoreShow || (detectedPlatform === 'melolo' ? "9.8" : "9.5")),
     tag: finalGenre.toUpperCase(),
     playCount: String(item.playCount || item.heatScoreShow || item.hot_num || "1.2M"),
-    chapterCount: finalCount,
-    totalEpisode: finalCount,
+    chapterCount: Number(item.totalEpisodes || item.chapter_count || item.chapterCount || item.serial_count || item.episode_count || item.upload_num || item.totalEpisode || 0),
     platform: detectedPlatform,
     genre: finalGenre,
     allTags: allTags.filter(t => t !== "").length > 0 ? allTags : [finalGenre]
